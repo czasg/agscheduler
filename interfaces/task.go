@@ -3,10 +3,7 @@ package interfaces
 import "time"
 
 type ITask interface {
-	Go()
-	Pause() error
-	Resume() error
+	Go(now time.Time)
 	GetName() string
-	GetRunTimes(now time.Time) []time.Time
-	SetScheduler(scheduler IScheduler)
+	GetNextRunTime(now time.Time) time.Time
 }

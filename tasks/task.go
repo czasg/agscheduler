@@ -6,12 +6,13 @@ import (
 )
 
 type Task struct {
-	Name      string
-	Func      func(args []interface{})
-	Args      []interface{}
-	Scheduler interfaces.IScheduler
-	Trigger   interfaces.ITrigger
-	Store     interfaces.IStore
+	Name            string
+	Func            func(args []interface{})
+	Args            []interface{}
+	Scheduler       interfaces.IScheduler
+	Trigger         interfaces.ITrigger
+	Store           interfaces.IStore
+	PreviousRunTime time.Time
 }
 
 func NewTask(name string, method func(args []interface{}), args []interface{}, trigger interfaces.ITrigger) *Task {
@@ -22,23 +23,16 @@ func NewTask(name string, method func(args []interface{}), args []interface{}, t
 		Trigger: trigger,
 	}
 }
-func (t *Task) Go() {
-	go func() {
-		t.Func(t.Args)
-	}()
+
+func (t *Task) Go(runTime time.Time) {
+	t.PreviousRunTime = runTime
+	go t.Func(t.Args)
 }
-func (t *Task) Pause() error {
-	return nil
-}
-func (t *Task) Resume() error {
-	return nil
-}
+
 func (t *Task) GetName() string {
 	return t.Name
 }
-func (t *Task) GetRunTimes(now time.Time) []time.Time {
-	return []time.Time{}
-}
-func (t *Task) SetScheduler(scheduler interfaces.IScheduler) {
-	return
+
+func (t *Task) GetNextRunTime(now time.Time) time.Time {
+	return t.Trigger.NextFireTime(t.PreviousRunTime, now)
 }

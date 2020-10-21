@@ -3,9 +3,10 @@ package interfaces
 import "time"
 
 type IStore interface {
-	GetDueTasks() []ITask
+	GetDueTasks(now time.Time) []ITask
 	GetAllTasks() []ITask
 	AddTask(task ITask) error
 	DelTask(task ITask) error
-	NextRunTime() (time.Time, error)
+	UpdateTask(task ITask, now time.Time) error
+	GetNextRunTime(now time.Time) time.Time
 }

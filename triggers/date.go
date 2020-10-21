@@ -1,28 +1,23 @@
 package triggers
 
 import (
-	"errors"
+	"github.com/CzaOrz/AGScheduler"
 	"time"
 )
 
-var DateTriggerError = errors.New("Date Trigger Done")
-
 type DateTrigger struct {
-	Time time.Time
-	Done bool
+	RunDateTime time.Time
 }
 
-func NewDateTrigger(time time.Time) *DateTrigger {
+func NewDateTrigger(runDateTime time.Time) *DateTrigger {
 	return &DateTrigger{
-		Time: time,
-		Done: false,
+		RunDateTime: runDateTime,
 	}
 }
 
-func (t *DateTrigger) NextFireTime(previous, now time.Time) (time.Time, error) {
-	if t.Done {
-		return time.Time{}, DateTriggerError
+func (d DateTrigger) NextFireTime(previous, now time.Time) time.Time {
+	if !previous.Equal(AGScheduler.EmptyDateTime) {
+		return AGScheduler.EmptyDateTime
 	}
-	t.Done = true
-	return t.Time, nil
+	return d.RunDateTime
 }

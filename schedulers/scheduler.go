@@ -1,11 +1,14 @@
 package schedulers
 
 import (
+	"context"
 	"errors"
 	"github.com/CzaOrz/AGScheduler"
 	"github.com/CzaOrz/AGScheduler/interfaces"
-	"github.com/CzaOrz/AGScheduler/stores"
 	"github.com/CzaOrz/AGScheduler/tasks"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -15,9 +18,7 @@ type Scheduler struct {
 	StoresMap map[string]interfaces.IStore
 }
 
-func NewScheduler(worksMap AGScheduler.WorksMap) *Scheduler {
-	store := stores.NewMemoryStore()
-
+func NewScheduler(worksMap AGScheduler.WorksMap, store interfaces.IStore) *Scheduler {
 	return &Scheduler{
 		TasksMap: worksMap,
 		StoresMap: map[string]interfaces.IStore{
@@ -27,26 +28,69 @@ func NewScheduler(worksMap AGScheduler.WorksMap) *Scheduler {
 }
 
 func (s *Scheduler) Start() {
+	ticker := time.NewTicker(time.Second)
+	closeContext, cancel := context.WithCancel(context.Background())
+	go func() {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch,
+			os.Interrupt,
+			syscall.SIGINT,
+			syscall.SIGTERM,
+		)
+		<-ch
+		cancel()
+	}()
+
 	for {
-		nextCallTime := 10
-		for _, store := range s.StoresMap {
-			dueTasks := store.GetDueTasks()
-			for _, dueTask := range dueTasks {
-				dueTask.Go()
+		select {
+		case <-closeContext.Done():
+			break
+		default:
+			now := time.Now()
+			nextCallTime := time.Time{}
+			for _, store := range s.StoresMap {
+				{
+					dueTasks := store.GetDueTasks(now) // Gets the tasks that should be scheduled
+					for _, dueTask := range dueTasks {
+						dueTaskRunTime := dueTask.GetNextRunTime(now)
+						dueTask.Go(dueTaskRunTime)
+						dueTaskNextRunTime := dueTask.GetNextRunTime(now)
+						if dueTaskNextRunTime.Equal(AGScheduler.EmptyDateTime) {
+							_ = store.DelTask(dueTask)
+							continue
+						}
+						_ = store.UpdateTask(dueTask, now)
+					}
+				}
+				{
+					nextRunTime := store.GetNextRunTime(now)
+					if nextRunTime.Equal(AGScheduler.EmptyDateTime) {
+						continue
+					}
+					if nextCallTime.Equal(AGScheduler.EmptyDateTime) {
+						nextCallTime = nextRunTime
+					}
+					if nextCallTime.After(nextRunTime) {
+						nextCallTime = nextRunTime
+					}
+				}
 			}
+			if nextCallTime.Equal(AGScheduler.EmptyDateTime) {
+				<-ticker.C
+				continue
+			}
+			time.Sleep(time.Duration(nextCallTime.Unix()-now.Unix()) * time.Second)
 		}
-		time.Sleep(time.Duration(nextCallTime) * time.Second)
-		break
 	}
 }
 
 func (s *Scheduler) AddTask(task interfaces.ITask) error {
+	//defer s.Cond.Signal()
 	taskName := task.GetName()
 	_, ok := s.TasksMap[taskName]
 	if ok {
 		return errors.New(taskName + " is conflict with TasksMap")
 	}
-	task.SetScheduler(s)
 	_ = s.StoresMap["memory"].AddTask(task)
 	return nil
 }
@@ -72,6 +116,9 @@ func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interfac
 }
 
 func (s *Scheduler) DelTask(task interfaces.ITask) error {
+	for _, store := range s.StoresMap {
+		_ = store.DelTask(task)
+	}
 	return nil
 }
 
