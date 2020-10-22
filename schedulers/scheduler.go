@@ -85,7 +85,6 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) AddTask(task interfaces.ITask) error {
-	//defer s.Cond.Signal()
 	taskName := task.GetName()
 	_, ok := s.TasksMap[taskName]
 	if ok {

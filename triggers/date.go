@@ -1,6 +1,7 @@
 package triggers
 
 import (
+	"errors"
 	"github.com/CzaOrz/AGScheduler"
 	"time"
 )
@@ -9,10 +10,11 @@ type DateTrigger struct {
 	RunDateTime time.Time
 }
 
-func NewDateTrigger(runDateTime time.Time) *DateTrigger {
-	return &DateTrigger{
-		RunDateTime: runDateTime,
+func NewDateTrigger(runDateTime time.Time) (*DateTrigger, error) {
+	if runDateTime.Before(AGScheduler.EmptyDateTime) {
+		return nil, errors.New("Invalid Run Date Time")
 	}
+	return &DateTrigger{runDateTime}, nil
 }
 
 func (d DateTrigger) NextFireTime(previous, now time.Time) time.Time {
