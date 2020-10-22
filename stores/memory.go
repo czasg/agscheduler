@@ -42,6 +42,15 @@ func (m *MemoryStore) GetAllTasks() []interfaces.ITask {
 	return allTasks
 }
 
+func (m *MemoryStore) GetTask(name string) (interfaces.ITask, error) {
+	el, ok := m.TasksMap[name]
+	if ok {
+		task := el.Value.(interfaces.ITask)
+		return task, nil
+	}
+	return nil, errors.New("not found task")
+}
+
 func (m *MemoryStore) AddTask(task interfaces.ITask) error {
 	now := time.Now()
 	startTime := task.GetNextRunTime(now)

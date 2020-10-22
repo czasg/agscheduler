@@ -7,6 +7,7 @@ type ITask interface {
 	Pause()
 	Resume()
 	GetName() string
+	UpdateTrigger(trigger ITrigger)
 	SetScheduler(scheduler IScheduler)
 	GetNextRunTime(now time.Time) time.Time
 }

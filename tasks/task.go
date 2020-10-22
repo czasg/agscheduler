@@ -70,6 +70,13 @@ func (t *Task) SetScheduler(scheduler interfaces.IScheduler) {
 	t.Scheduler = scheduler
 }
 
+func (t *Task) UpdateTrigger(trigger interfaces.ITrigger) {
+	t.Trigger = trigger
+	t.PreviousRunTime = AGScheduler.EmptyDateTime
+	t.Scheduler.Wake()
+	t.Logger.Info("update trigger")
+}
+
 func (t *Task) GetNextRunTime(now time.Time) time.Time {
 	if t.Running {
 		return t.Trigger.NextFireTime(t.PreviousRunTime, now)

@@ -7,6 +7,7 @@ import (
 	"github.com/CzaOrz/AGScheduler/stores"
 	"github.com/CzaOrz/AGScheduler/tasks"
 	"github.com/CzaOrz/AGScheduler/triggers"
+	"os"
 	"time"
 )
 
@@ -16,17 +17,19 @@ func main() {
 
 	trigger1, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), AGScheduler.EmptyDateTime, time.Second*5)
 	task1 := tasks.NewTask("task1", func(args []interface{}) {
-		fmt.Println(args)
+		fmt.Println(args, time.Now())
 	}, []interface{}{"this", "is", "task1"}, trigger1)
 	_ = scheduler.AddTask(task1)
 
 	go func() {
-		time.Sleep(time.Second * 10)
-		task1.Pause()
-		fmt.Println("Pause", time.Now())
-		time.Sleep(time.Second * 20)
-		fmt.Println("Resume", time.Now())
-		task1.Resume()
+		time.Sleep(time.Second * 15)
+		task, _ := scheduler.GetTask("task1")
+
+		trigger2, _ := triggers.NewIntervalTrigger(now, AGScheduler.EmptyDateTime, time.Second*1)
+		task.UpdateTrigger(trigger2)
+
+		time.Sleep(time.Second * 30)
+		os.Exit(1)
 	}()
 
 	scheduler.Start()

@@ -7,6 +7,7 @@ import (
 	"github.com/CzaOrz/AGScheduler/stores"
 	"github.com/CzaOrz/AGScheduler/tasks"
 	"github.com/CzaOrz/AGScheduler/triggers"
+	"os"
 	"time"
 )
 
@@ -22,11 +23,9 @@ func main() {
 
 	go func() {
 		time.Sleep(time.Second * 10)
-		task1.Pause()
-		fmt.Println("Pause", time.Now())
-		time.Sleep(time.Second * 20)
-		fmt.Println("Resume", time.Now())
-		task1.Resume()
+		task, _ := scheduler.GetTask("task1")
+		fmt.Println(task == task1)
+		os.Exit(1)
 	}()
 
 	scheduler.Start()

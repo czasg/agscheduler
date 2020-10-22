@@ -136,6 +136,17 @@ func (s *Scheduler) AddWorksMap(worksMap AGScheduler.WorksMap) error {
 	return nil
 }
 
+func (s *Scheduler) GetTask(name string) (interfaces.ITask, error) {
+	for _, store := range s.StoresMap {
+		task, err := store.GetTask(name)
+		if err != nil {
+			continue
+		}
+		return task, nil
+	}
+	return nil, errors.New("not found task")
+}
+
 func (s *Scheduler) AddTask(task interfaces.ITask) error {
 	logger := s.Logger.WithFields(logrus.Fields{
 		"Func": "AddTask",
