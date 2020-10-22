@@ -79,7 +79,14 @@ func (t *Task) UpdateTrigger(trigger interfaces.ITrigger) {
 
 func (t *Task) GetNextRunTime(now time.Time) time.Time {
 	if t.Running {
-		return t.Trigger.NextFireTime(t.PreviousRunTime, now)
+		nextFireTime := t.Trigger.NextFireTime(t.PreviousRunTime, now)
+		if nextFireTime.Equal(AGScheduler.EmptyDateTime) {
+			return nextFireTime
+		}
+		if nextFireTime.Before(now) {
+			return now.Add(-time.Duration(1))
+		}
+		return nextFireTime
 	} else {
 		return AGScheduler.MaxDateTime
 	}
