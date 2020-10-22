@@ -7,6 +7,7 @@ import (
 	"github.com/CzaOrz/AGScheduler/interfaces"
 	"github.com/CzaOrz/AGScheduler/tasks"
 	"github.com/sirupsen/logrus"
+	"math"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,26 +15,30 @@ import (
 )
 
 type Scheduler struct {
-	State     string
-	TasksMap  AGScheduler.WorksMap
-	StoresMap map[string]interfaces.IStore
-	Logger    *logrus.Entry
+	State      string
+	WorksMap   AGScheduler.WorksMap
+	StoresMap  map[string]interfaces.IStore
+	Logger     *logrus.Entry
+	Controller *Controller
 }
 
 func NewScheduler(worksMap AGScheduler.WorksMap, store interfaces.IStore) *Scheduler {
 	return &Scheduler{
-		TasksMap: worksMap,
+		WorksMap: worksMap,
 		StoresMap: map[string]interfaces.IStore{
-			"memory": store,
+			"default": store,
 		},
 		Logger: logrus.WithFields(logrus.Fields{
 			"Module": "AGScheduler.Scheduler",
 		}),
+		Controller: NewController(),
 	}
 }
 
 func (s *Scheduler) Start() {
-	ticker := time.NewTicker(time.Second)
+	logger := s.Logger.WithFields(logrus.Fields{
+		"Func": "Start",
+	})
 	closeContext, cancel := context.WithCancel(context.Background())
 	go func() {
 		ch := make(chan os.Signal, 1)
@@ -49,6 +54,7 @@ func (s *Scheduler) Start() {
 	for {
 		select {
 		case <-closeContext.Done():
+			logger.Warning("AGScheduler server closed")
 			break
 		default:
 			now := time.Now()
@@ -63,13 +69,20 @@ func (s *Scheduler) Start() {
 						if dueTaskNextRunTime.Equal(AGScheduler.EmptyDateTime) {
 							err := store.DelTask(dueTask)
 							if err != nil {
-								s.Logger.Errorln("del task failure: " + err.Error())
+								logger.WithFields(logrus.Fields{
+									"TaskName": dueTask.GetName(),
+								}).WithError(err).Errorln("del task failure")
 							} else {
-								s.Logger.Info("del task success: " + dueTask.GetName())
+								logger.Info("del task success: " + dueTask.GetName())
 							}
 							continue
 						}
-						_ = store.UpdateTask(dueTask, now)
+						err := store.UpdateTask(dueTask, now)
+						if err != nil {
+							logger.WithFields(logrus.Fields{
+								"TaskName": dueTask.GetName(),
+							}).WithError(err).Errorln("update task failure")
+						}
 					}
 				}
 				{
@@ -85,36 +98,72 @@ func (s *Scheduler) Start() {
 					}
 				}
 			}
-			if nextCallTime.Equal(AGScheduler.EmptyDateTime) {
-				<-ticker.C
-				s.Logger.Debug("wait task")
-				continue
+			{
+				if nextCallTime.Equal(AGScheduler.EmptyDateTime) {
+					logger.Info("wait task")
+					nextCallTime = now.Add(time.Duration(math.MaxInt64)) // block until new task to wake
+				}
+				s.Controller.Reset(nextCallTime)
+				select {
+				case <-s.Controller.Deadline.Done():
+					continue
+				}
 			}
-			time.Sleep(time.Duration(nextCallTime.Unix()-now.Unix()) * time.Second)
 		}
 	}
 }
 
+func (s *Scheduler) AddWorksMap(worksMap AGScheduler.WorksMap) error {
+	logger := s.Logger.WithFields(logrus.Fields{
+		"Func": "AddWorksMap",
+	})
+	if s.WorksMap == nil {
+		s.Logger.Info("empty works map")
+		for workName, _ := range worksMap {
+			logger.Info("add map work: " + workName)
+		}
+		s.WorksMap = worksMap
+		return nil
+	}
+	for workName, workDetail := range worksMap {
+		_, ok := s.WorksMap[workName]
+		if ok {
+			logger.Warning("ignore conflict map work: " + workName)
+			continue
+		}
+		logger.Info("add map work: " + workName)
+		s.WorksMap[workName] = workDetail
+	}
+	return nil
+}
+
 func (s *Scheduler) AddTask(task interfaces.ITask) error {
+	logger := s.Logger.WithFields(logrus.Fields{
+		"Func": "AddTask",
+	})
 	taskName := task.GetName()
-	_, ok := s.TasksMap[taskName]
+	_, ok := s.WorksMap[taskName]
 	if ok {
 		return errors.New(taskName + " is conflict with TasksMap")
 	}
-	err := s.StoresMap["memory"].AddTask(task)
+	err := s.StoresMap["default"].AddTask(task)
 	if err != nil {
 		return err
 	}
-	s.Logger.Info("add task success: " + taskName)
+	logger.Info("add task success: " + taskName)
+	s.Controller.Cancel()
 	return nil
 }
 
 func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interface{}, trigger interfaces.ITrigger) error {
-	_, ok := s.TasksMap[name]
+	logger := s.Logger.WithFields(logrus.Fields{
+		"Func": "AddTaskFromTasksMap",
+	})
+	_, ok := s.WorksMap[name]
 	if ok {
 		return errors.New(name + " is conflict with TasksMap")
 	}
-	detail, ok := s.TasksMap[taskMapKey]
+	detail, ok := s.WorksMap[taskMapKey]
 	if !ok {
 		return errors.New(name + " is not define in TasksMap")
 	}
@@ -126,18 +175,21 @@ func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interfac
 	if err != nil {
 		return err
 	}
-	s.Logger.Info("add task success: " + name)
+	logger.Info("add task success: " + name)
 	return nil
 }
 
 func (s *Scheduler) DelTask(task interfaces.ITask) error {
+	logger := s.Logger.WithFields(logrus.Fields{
+		"Func": "DelTask",
+	})
 	for _, store := range s.StoresMap {
 		err := store.DelTask(task)
 		if err != nil {
 			return err
 		}
 	}
-	s.Logger.Info("del task success: " + task.GetName())
+	logger.Info("del task success: " + task.GetName())
 	return nil
 }
 

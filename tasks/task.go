@@ -19,7 +19,6 @@ type Task struct {
 }
 
 func NewTask(name string, method func(args []interface{}), args []interface{}, trigger interfaces.ITrigger) *Task {
-	logrus.WithFields(logrus.Fields{})
 	return &Task{
 		Name:    name,
 		Func:    method,
@@ -40,7 +39,9 @@ func (t *Task) Go(runTime time.Time) {
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
-				t.Logger.Errorf("cron: panic running task: %v\n%s", r, buf)
+				t.Logger.WithFields(logrus.Fields{
+					"Func": "Go",
+				}).Errorf("cron: panic running task: %v\n%s", r, buf)
 			}
 		}()
 		t.Func(t.Args)
