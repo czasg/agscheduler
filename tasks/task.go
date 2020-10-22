@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"github.com/CzaOrz/AGScheduler"
 	"github.com/CzaOrz/AGScheduler/interfaces"
 	"github.com/sirupsen/logrus"
 	"runtime"
@@ -16,6 +17,7 @@ type Task struct {
 	Store           interfaces.IStore
 	PreviousRunTime time.Time
 	Logger          *logrus.Entry
+	Running         bool
 }
 
 func NewTask(name string, method func(args []interface{}), args []interface{}, trigger interfaces.ITrigger) *Task {
@@ -28,6 +30,7 @@ func NewTask(name string, method func(args []interface{}), args []interface{}, t
 			"Module":   "AGScheduler.Task",
 			"TaskName": name,
 		}),
+		Running: true,
 	}
 }
 
@@ -52,6 +55,25 @@ func (t *Task) GetName() string {
 	return t.Name
 }
 
+func (t *Task) Pause() {
+	t.Running = false
+	t.Scheduler.Wake()
+}
+
+func (t *Task) Resume() {
+	t.Running = true
+	t.PreviousRunTime = time.Now()
+	t.Scheduler.Wake()
+}
+
+func (t *Task) SetScheduler(scheduler interfaces.IScheduler) {
+	t.Scheduler = scheduler
+}
+
 func (t *Task) GetNextRunTime(now time.Time) time.Time {
-	return t.Trigger.NextFireTime(t.PreviousRunTime, now)
+	if t.Running {
+		return t.Trigger.NextFireTime(t.PreviousRunTime, now)
+	} else {
+		return AGScheduler.MaxDateTime
+	}
 }

@@ -27,8 +27,8 @@ func (i IntervalTrigger) NextFireTime(previous, now time.Time) time.Time {
 	if !i.EndRunTime.Equal(AGScheduler.EmptyDateTime) && i.EndRunTime.Before(now) {
 		return AGScheduler.EmptyDateTime
 	}
-	if !previous.Equal(AGScheduler.EmptyDateTime) {
-		return previous.Add(i.Interval)
+	if previous.Equal(AGScheduler.EmptyDateTime) {
+		return i.StartRunTime
 	}
-	return i.StartRunTime
+	return previous.Add(i.Interval)
 }

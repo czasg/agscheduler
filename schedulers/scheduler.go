@@ -7,7 +7,6 @@ import (
 	"github.com/CzaOrz/AGScheduler/interfaces"
 	"github.com/CzaOrz/AGScheduler/tasks"
 	"github.com/sirupsen/logrus"
-	"math"
 	"os"
 	"os/signal"
 	"syscall"
@@ -55,7 +54,7 @@ func (s *Scheduler) Start() {
 		select {
 		case <-closeContext.Done():
 			logger.Warning("AGScheduler server closed")
-			break
+			os.Exit(1)
 		default:
 			now := time.Now()
 			nextCallTime := time.Time{}
@@ -101,7 +100,7 @@ func (s *Scheduler) Start() {
 			{
 				if nextCallTime.Equal(AGScheduler.EmptyDateTime) {
 					logger.Info("wait task")
-					nextCallTime = now.Add(time.Duration(math.MaxInt64)) // block until new task to wake
+					nextCallTime = AGScheduler.MaxDateTime // block until new task to wake
 				}
 				s.Controller.Reset(nextCallTime)
 				select {
@@ -151,7 +150,8 @@ func (s *Scheduler) AddTask(task interfaces.ITask) error {
 		return err
 	}
 	logger.Info("add task success: " + taskName)
-	s.Controller.Cancel()
+	task.SetScheduler(s)
+	s.Wake()
 	return nil
 }
 
@@ -195,4 +195,8 @@ func (s *Scheduler) DelTask(task interfaces.ITask) error {
 
 func (s *Scheduler) SetStore(name string, store interfaces.IStore) {
 	s.StoresMap[name] = store
+}
+
+func (s *Scheduler) Wake() {
+	s.Controller.Cancel()
 }
