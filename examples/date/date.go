@@ -22,11 +22,11 @@ func main() {
 	now := time.Now()
 	fmt.Println(now)
 
-	dateTrigger1 := triggers.NewDateTrigger(now.Add(time.Second * 1))
-	dateTrigger2 := triggers.NewDateTrigger(now.Add(time.Second * 2))
-	dateTrigger3 := triggers.NewDateTrigger(now.Add(time.Second * 3))
-	dateTrigger4 := triggers.NewDateTrigger(now.Add(time.Second * 4))
-	dateTrigger5 := triggers.NewDateTrigger(now.Add(time.Second * 5))
+	dateTrigger1, _ := triggers.NewDateTrigger(now.Add(time.Second * 1))
+	dateTrigger2, _ := triggers.NewDateTrigger(now.Add(time.Second * 2))
+	dateTrigger3, _ := triggers.NewDateTrigger(now.Add(time.Second * 3))
+	dateTrigger4, _ := triggers.NewDateTrigger(now.Add(time.Second * 4))
+	dateTrigger5, _ := triggers.NewDateTrigger(now.Add(time.Second * 5))
 
 	task1 := tasks.NewTask("task1", taskFunc, []interface{}{"this", "is", "task1"}, dateTrigger1)
 	task2 := tasks.NewTask("task2", taskFunc, []interface{}{"this", "is", "task2"}, dateTrigger2)
@@ -43,8 +43,8 @@ func main() {
 	go func() {
 		time.Sleep(time.Second * 10)
 		now := time.Now()
-		dateTrigger7 := triggers.NewDateTrigger(now.Add(time.Second * 1))
-		dateTrigger8 := triggers.NewDateTrigger(now.Add(time.Second * 2))
+		dateTrigger7, _ := triggers.NewDateTrigger(now.Add(time.Second * 1))
+		dateTrigger8, _ := triggers.NewDateTrigger(now.Add(time.Second * 2))
 		task6 := tasks.NewTask("task6", taskFunc, []interface{}{"this", "is", "task6"}, dateTrigger7)
 		task7 := tasks.NewTask("task7", taskFunc, []interface{}{"this", "is", "task7"}, dateTrigger8)
 		_ = scheduler.AddTask(task6)

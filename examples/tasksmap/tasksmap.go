@@ -49,11 +49,11 @@ func main() {
 
 	now := time.Now()
 	fmt.Println(now)
-	dateTrigger1 := triggers.NewDateTrigger(now.Add(time.Second * 1))
-	dateTrigger2 := triggers.NewDateTrigger(now.Add(time.Second * 2))
-	dateTrigger3 := triggers.NewDateTrigger(now.Add(time.Second * 3))
-	dateTrigger4 := triggers.NewDateTrigger(now.Add(time.Second * 4))
-	dateTrigger5 := triggers.NewDateTrigger(now.Add(time.Second * 5))
+	dateTrigger1, _ := triggers.NewDateTrigger(now.Add(time.Second * 1))
+	dateTrigger2, _ := triggers.NewDateTrigger(now.Add(time.Second * 2))
+	dateTrigger3, _ := triggers.NewDateTrigger(now.Add(time.Second * 3))
+	dateTrigger4, _ := triggers.NewDateTrigger(now.Add(time.Second * 4))
+	dateTrigger5, _ := triggers.NewDateTrigger(now.Add(time.Second * 5))
 
 	_ = scheduler.AddTaskFromTasksMap("t-task1", "task1", []interface{}{}, dateTrigger1)
 	_ = scheduler.AddTaskFromTasksMap("t-task2", "task2", []interface{}{}, dateTrigger2)

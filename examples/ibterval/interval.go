@@ -22,11 +22,11 @@ func main() {
 	now := time.Now()
 	fmt.Println(now)
 
-	trigger1 := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*10), time.Second*5)
-	trigger2 := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*20), time.Second*5)
-	trigger3 := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*30), time.Second*5)
-	trigger4 := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*40), time.Second*5)
-	trigger5 := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*50), time.Second*5)
+	trigger1, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*10), time.Second*5)
+	trigger2, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*20), time.Second*5)
+	trigger3, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*30), time.Second*5)
+	trigger4, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*40), time.Second*5)
+	trigger5, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*50), time.Second*5)
 
 	task1 := tasks.NewTask("task1", taskFunc, []interface{}{"this", "is", "task1"}, trigger1)
 	task2 := tasks.NewTask("task2", taskFunc, []interface{}{"this", "is", "task2"}, trigger2)
@@ -43,8 +43,8 @@ func main() {
 	go func() {
 		time.Sleep(time.Second * 60)
 		now := time.Now()
-		trigger6 := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*10), time.Second*5)
-		trigger7 := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*20), time.Second*5)
+		trigger6, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*10), time.Second*5)
+		trigger7, _ := triggers.NewIntervalTrigger(now.Add(time.Second*1), now.Add(time.Second*20), time.Second*5)
 		task6 := tasks.NewTask("task6", taskFunc, []interface{}{"this", "is", "task6"}, trigger6)
 		task7 := tasks.NewTask("task7", taskFunc, []interface{}{"this", "is", "task7"}, trigger7)
 		_ = scheduler.AddTask(task6)
