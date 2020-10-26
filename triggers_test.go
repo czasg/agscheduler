@@ -15,6 +15,7 @@ func TestCronTrigger_NextFireTime(t *testing.T) {
 	}
 
 	type fields struct {
+		CronCmd   string
 		StartTime time.Time
 		Schedule  cron.Schedule
 	}
@@ -31,6 +32,7 @@ func TestCronTrigger_NextFireTime(t *testing.T) {
 		{
 			name: "StartTime empty",
 			fields: fields{
+				CronCmd:   "*/5 * * * *",
 				StartTime: EmptyDateTime,
 				Schedule:  cronIns,
 			},
@@ -43,6 +45,7 @@ func TestCronTrigger_NextFireTime(t *testing.T) {
 		{
 			name: "StartTime is now",
 			fields: fields{
+				CronCmd:   "*/5 * * * *",
 				StartTime: now,
 				Schedule:  cronIns,
 			},
@@ -55,6 +58,7 @@ func TestCronTrigger_NextFireTime(t *testing.T) {
 		{
 			name: "previous is now",
 			fields: fields{
+				CronCmd:   "*/5 * * * *",
 				StartTime: now,
 				Schedule:  cronIns,
 			},
@@ -232,7 +236,10 @@ func TestNewCronTrigger(t *testing.T) {
 		{
 			"want succ",
 			args{"*/5 * * * *"},
-			&CronTrigger{Schedule: cronIns},
+			&CronTrigger{
+				CronCmd:  "*/5 * * * *",
+				Schedule: cronIns,
+			},
 			false,
 		},
 		{
@@ -343,6 +350,160 @@ func TestNewIntervalTrigger(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewIntervalTrigger() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCronTrigger_GetTriggerState(t *testing.T) {
+	now := time.Now()
+	cronCmd := "*/5 * * * *"
+	cronIns, err := cron.Parse(cronCmd)
+	if err != nil {
+		panic(err)
+	}
+
+	type fields struct {
+		CronCmd   string
+		StartTime time.Time
+		Schedule  cron.Schedule
+	}
+	type args struct {
+		previous time.Time
+		now      time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   TriggerState
+	}{
+		{
+			name: "succ",
+			fields: fields{
+				CronCmd:   "*/5 * * * *",
+				StartTime: now,
+				Schedule:  cronIns,
+			},
+			args: args{
+				previous: now,
+				now:      now,
+			},
+			want: TriggerState{
+				Name: "cron",
+				Cron: CronState{
+					CronCmd: cronCmd,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &CronTrigger{
+				CronCmd:   tt.fields.CronCmd,
+				StartTime: tt.fields.StartTime,
+				Schedule:  tt.fields.Schedule,
+			}
+			if got := c.GetTriggerState(tt.args.previous, tt.args.now); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetTriggerState() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIntervalTrigger_GetTriggerState(t *testing.T) {
+	now := time.Now()
+
+	type fields struct {
+		Interval     time.Duration
+		StartRunTime time.Time
+		EndRunTime   time.Time
+	}
+	type args struct {
+		previous time.Time
+		now      time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   TriggerState
+	}{
+		{
+			name: "succ",
+			fields: fields{
+				Interval:     time.Second,
+				StartRunTime: now,
+				EndRunTime:   now,
+			},
+			args: args{
+				previous: now,
+				now:      now,
+			},
+			want: TriggerState{
+				Name: "interval",
+				Interval: IntervalState{
+					StartRunTime: now,
+					EndRunTime:   now,
+					Interval:     time.Second,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := IntervalTrigger{
+				Interval:     tt.fields.Interval,
+				StartRunTime: tt.fields.StartRunTime,
+				EndRunTime:   tt.fields.EndRunTime,
+			}
+			if got := i.GetTriggerState(tt.args.previous, tt.args.now); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetTriggerState() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDateTrigger_GetTriggerState(t *testing.T) {
+	now := time.Now()
+
+	type fields struct {
+		RunDateTime time.Time
+	}
+	type args struct {
+		previous time.Time
+		now      time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   TriggerState
+	}{
+		{
+			name: "succ",
+			fields: fields{
+				RunDateTime: now,
+			},
+			args: args{
+				previous: now,
+				now:      now,
+			},
+			want: TriggerState{
+				Name: "date",
+				Date: DateState{
+					RunDateTime: now,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := DateTrigger{
+				RunDateTime: tt.fields.RunDateTime,
+			}
+			if got := d.GetTriggerState(tt.args.previous, tt.args.now); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetTriggerState() = %v, want %v", got, tt.want)
 			}
 		})
 	}
