@@ -6,10 +6,32 @@ import (
 	"time"
 )
 
+type TriggerState struct {
+	Name     string        `json:"name"`
+	Cron     CronState     `json:"cron"`
+	Date     DateState     `json:"date"`
+	Interval IntervalState `json:"interval"`
+}
+
+type CronState struct {
+	CronCmd string `json:"cron_cmd"`
+}
+
+type DateState struct {
+	RunDateTime time.Time `json:"run_date_time"`
+}
+
+type IntervalState struct {
+	StartRunTime time.Time     `json:"start_run_time"`
+	EndRunTime   time.Time     `json:"end_run_time"`
+	Interval     time.Duration `json:"interval"`
+}
+
 /*
 *	Cron
 **/
 type CronTrigger struct {
+	CronCmd   string
 	StartTime time.Time
 	Schedule  cron.Schedule
 }
@@ -19,7 +41,11 @@ func NewCronTrigger(cronCmd string) (*CronTrigger, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CronTrigger{Schedule: scheduler}, nil
+	return &CronTrigger{
+		CronCmd:   cronCmd,
+		StartTime: EmptyDateTime,
+		Schedule:  scheduler,
+	}, nil
 }
 
 func (c *CronTrigger) NextFireTime(previous, now time.Time) time.Time {
@@ -32,10 +58,12 @@ func (c *CronTrigger) NextFireTime(previous, now time.Time) time.Time {
 	return c.Schedule.Next(previous)
 }
 
-func (c *CronTrigger) GetTriggerState(previous, now time.Time) map[string]interface{} {
-	return map[string]interface{}{
-		"name": "cron",
-		"cmd":  "",
+func (c *CronTrigger) GetTriggerState(previous, now time.Time) TriggerState {
+	return TriggerState{
+		Name: "cron",
+		Cron: CronState{
+			CronCmd: c.CronCmd,
+		},
 	}
 }
 
@@ -58,6 +86,15 @@ func (d DateTrigger) NextFireTime(previous, now time.Time) time.Time {
 		return EmptyDateTime
 	}
 	return d.RunDateTime
+}
+
+func (d DateTrigger) GetTriggerState(previous, now time.Time) TriggerState {
+	return TriggerState{
+		Name: "date",
+		Date: DateState{
+			RunDateTime: d.RunDateTime,
+		},
+	}
 }
 
 /*
@@ -88,4 +125,15 @@ func (i IntervalTrigger) NextFireTime(previous, now time.Time) time.Time {
 		return i.StartRunTime
 	}
 	return previous.Add(i.Interval)
+}
+
+func (i IntervalTrigger) GetTriggerState(previous, now time.Time) TriggerState {
+	return TriggerState{
+		Name: "interval",
+		Interval: IntervalState{
+			StartRunTime: i.StartRunTime,
+			EndRunTime:   i.EndRunTime,
+			Interval:     i.Interval,
+		},
+	}
 }
