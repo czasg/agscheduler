@@ -1,8 +1,7 @@
-package schedulers
+package AGScheduler
 
 import (
 	"context"
-	"github.com/CzaOrz/AGScheduler"
 	"time"
 )
 
@@ -14,7 +13,7 @@ type Controller struct {
 
 func NewController() *Controller {
 	ctx := context.Background()
-	deadline, cancel := context.WithDeadline(ctx, AGScheduler.EmptyDateTime)
+	deadline, cancel := context.WithDeadline(ctx, EmptyDateTime)
 	return &Controller{
 		Ctx:      ctx,
 		Deadline: deadline,
