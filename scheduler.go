@@ -17,9 +17,8 @@ var MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
 type WorksMap map[string]WorkDetail
 
 type WorkDetail struct {
-	Func   func(args []interface{}, kwargs map[string]interface{})
-	Args   []interface{}
-	KwArgs map[string]interface{}
+	Func func(args []interface{})
+	Args []interface{}
 }
 
 type Scheduler struct {
@@ -132,7 +131,7 @@ func (s *Scheduler) AddTask(task *Task) error {
 	if ok {
 		return errors.New(taskName + " is conflict with TasksMap")
 	}
-	err := s.StoresMap["default"].AddTask(*task)
+	err := s.StoresMap["default"].AddTask(task)
 	if err != nil {
 		return err
 	}
@@ -141,7 +140,7 @@ func (s *Scheduler) AddTask(task *Task) error {
 	return nil
 }
 
-func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interface{}, kwargs map[string]interface{}, trigger ITrigger) error {
+func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interface{}, trigger ITrigger) error {
 	logger := s.Logger.WithFields(logrus.Fields{
 		"Func": "AddTaskFromTasksMap",
 	})
@@ -156,7 +155,7 @@ func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interfac
 	if len(args) == 0 {
 		args = detail.Args
 	}
-	task := NewTask(name, detail.Func, args, kwargs, trigger)
+	task := NewTask(name, detail.Func, args, trigger)
 	err := s.AddTask(task)
 	if err != nil {
 		return err
@@ -165,7 +164,7 @@ func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interfac
 	return nil
 }
 
-func (s *Scheduler) GetTaskByName(name string) (Task, error) {
+func (s *Scheduler) GetTaskByName(name string) (*Task, error) {
 	for _, store := range s.StoresMap {
 		task, err := store.GetTaskByName(name)
 		if err != nil {
@@ -173,14 +172,14 @@ func (s *Scheduler) GetTaskByName(name string) (Task, error) {
 		}
 		return task, nil
 	}
-	return Task{}, errors.New("not found task")
+	return nil, errors.New("not found task")
 }
 
-func (s *Scheduler) GetAllTasks() []Task {
+func (s *Scheduler) GetAllTasks() []*Task {
 	return s.StoresMap["default"].GetAllTasks()
 }
 
-func (s *Scheduler) UpdateTask(task Task) error {
+func (s *Scheduler) UpdateTask(task *Task) error {
 	logger := s.Logger.WithFields(logrus.Fields{
 		"Func": "UpdateTask",
 	})
@@ -188,11 +187,12 @@ func (s *Scheduler) UpdateTask(task Task) error {
 	if err != nil {
 		return err
 	}
-	logger.Info("del task success: " + task.Name)
+	logger.Info("update task success: " + task.Name)
+	s.Wake()
 	return nil
 }
 
-func (s *Scheduler) DelTask(task Task) error {
+func (s *Scheduler) DelTask(task *Task) error {
 	logger := s.Logger.WithFields(logrus.Fields{
 		"Func": "DelTask",
 	})
