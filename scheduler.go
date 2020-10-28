@@ -22,11 +22,11 @@ type WorkDetail struct {
 }
 
 type Scheduler struct {
-	State      string
-	WorksMap   WorksMap
-	StoresMap  map[string]IStore
-	Logger     *logrus.Entry
-	Controller *Controller
+	WorksMap    WorksMap
+	StoresMap   map[string]IStore
+	Logger      *logrus.Entry
+	Controller  *Controller
+	CloseCancel context.CancelFunc
 }
 
 func NewScheduler(worksMap WorksMap, store IStore) *Scheduler {
@@ -47,6 +47,7 @@ func (s *Scheduler) Start() {
 		"Func": "Start",
 	})
 	closeContext, cancel := context.WithCancel(context.Background())
+	s.CloseCancel = cancel
 	go func() {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch,
@@ -55,14 +56,18 @@ func (s *Scheduler) Start() {
 			syscall.SIGTERM,
 		)
 		<-ch
-		cancel()
+		s.Close()
 	}()
 
+	exit := false
 	for {
+		if exit {
+			break
+		}
 		select {
 		case <-closeContext.Done():
 			logger.Warning("AGScheduler server closed")
-			os.Exit(1)
+			exit = true
 		default:
 			now := time.Now()
 			nextCallTime := time.Time{}
@@ -115,6 +120,12 @@ func (s *Scheduler) Start() {
 			}
 		}
 	}
+}
+
+func (s *Scheduler) Close() {
+	time.Sleep(time.Second)
+	s.CloseCancel()
+	s.Wake()
 }
 
 func (s *Scheduler) Wake() {

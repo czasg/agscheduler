@@ -57,7 +57,7 @@ func (m *MemoryStore) AddTask(task *Task) error {
 	now := time.Now()
 	startTime := task.GetNextFireTime(now)
 	for el := m.Tasks.Front(); el != nil; el = el.Next() {
-		iTask := el.Value.(Task)
+		iTask := el.Value.(*Task)
 		iTaskRunTime := iTask.GetNextFireTime(now)
 		if startTime.After(iTaskRunTime) {
 			continue
