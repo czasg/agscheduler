@@ -368,14 +368,9 @@ func TestCronTrigger_GetTriggerState(t *testing.T) {
 		StartTime time.Time
 		Schedule  cron.Schedule
 	}
-	type args struct {
-		previous time.Time
-		now      time.Time
-	}
 	tests := []struct {
 		name   string
 		fields fields
-		args   args
 		want   TriggerState
 	}{
 		{
@@ -384,10 +379,6 @@ func TestCronTrigger_GetTriggerState(t *testing.T) {
 				CronCmd:   "*/5 * * * *",
 				StartTime: now,
 				Schedule:  cronIns,
-			},
-			args: args{
-				previous: now,
-				now:      now,
 			},
 			want: TriggerState{
 				Name: "cron",
@@ -404,7 +395,7 @@ func TestCronTrigger_GetTriggerState(t *testing.T) {
 				StartTime: tt.fields.StartTime,
 				Schedule:  tt.fields.Schedule,
 			}
-			if got := c.GetTriggerState(tt.args.previous, tt.args.now); !reflect.DeepEqual(got, tt.want) {
+			if got := c.GetTriggerState(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetTriggerState() = %v, want %v", got, tt.want)
 			}
 		})
@@ -419,14 +410,9 @@ func TestIntervalTrigger_GetTriggerState(t *testing.T) {
 		StartRunTime time.Time
 		EndRunTime   time.Time
 	}
-	type args struct {
-		previous time.Time
-		now      time.Time
-	}
 	tests := []struct {
 		name   string
 		fields fields
-		args   args
 		want   TriggerState
 	}{
 		{
@@ -435,10 +421,6 @@ func TestIntervalTrigger_GetTriggerState(t *testing.T) {
 				Interval:     time.Second,
 				StartRunTime: now,
 				EndRunTime:   now,
-			},
-			args: args{
-				previous: now,
-				now:      now,
 			},
 			want: TriggerState{
 				Name: "interval",
@@ -457,7 +439,7 @@ func TestIntervalTrigger_GetTriggerState(t *testing.T) {
 				StartRunTime: tt.fields.StartRunTime,
 				EndRunTime:   tt.fields.EndRunTime,
 			}
-			if got := i.GetTriggerState(tt.args.previous, tt.args.now); !reflect.DeepEqual(got, tt.want) {
+			if got := i.GetTriggerState(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetTriggerState() = %v, want %v", got, tt.want)
 			}
 		})
@@ -470,24 +452,15 @@ func TestDateTrigger_GetTriggerState(t *testing.T) {
 	type fields struct {
 		RunDateTime time.Time
 	}
-	type args struct {
-		previous time.Time
-		now      time.Time
-	}
 	tests := []struct {
 		name   string
 		fields fields
-		args   args
 		want   TriggerState
 	}{
 		{
 			name: "succ",
 			fields: fields{
 				RunDateTime: now,
-			},
-			args: args{
-				previous: now,
-				now:      now,
 			},
 			want: TriggerState{
 				Name: "date",
@@ -502,7 +475,7 @@ func TestDateTrigger_GetTriggerState(t *testing.T) {
 			d := DateTrigger{
 				RunDateTime: tt.fields.RunDateTime,
 			}
-			if got := d.GetTriggerState(tt.args.previous, tt.args.now); !reflect.DeepEqual(got, tt.want) {
+			if got := d.GetTriggerState(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetTriggerState() = %v, want %v", got, tt.want)
 			}
 		})

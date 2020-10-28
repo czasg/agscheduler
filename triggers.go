@@ -58,7 +58,7 @@ func (c *CronTrigger) NextFireTime(previous, now time.Time) time.Time {
 	return c.Schedule.Next(previous)
 }
 
-func (c *CronTrigger) GetTriggerState(previous, now time.Time) TriggerState {
+func (c *CronTrigger) GetTriggerState() TriggerState {
 	return TriggerState{
 		Name: "cron",
 		Cron: CronState{
@@ -81,14 +81,14 @@ func NewDateTrigger(runDateTime time.Time) (*DateTrigger, error) {
 	return &DateTrigger{runDateTime}, nil
 }
 
-func (d DateTrigger) NextFireTime(previous, now time.Time) time.Time {
+func (d *DateTrigger) NextFireTime(previous, now time.Time) time.Time {
 	if !previous.Equal(EmptyDateTime) {
 		return EmptyDateTime
 	}
 	return d.RunDateTime
 }
 
-func (d DateTrigger) GetTriggerState(previous, now time.Time) TriggerState {
+func (d *DateTrigger) GetTriggerState() TriggerState {
 	return TriggerState{
 		Name: "date",
 		Date: DateState{
@@ -117,7 +117,7 @@ func NewIntervalTrigger(startTime, endTime time.Time, interval time.Duration) (*
 	}, nil
 }
 
-func (i IntervalTrigger) NextFireTime(previous, now time.Time) time.Time {
+func (i *IntervalTrigger) NextFireTime(previous, now time.Time) time.Time {
 	if !i.EndRunTime.Equal(EmptyDateTime) && i.EndRunTime.Before(now) {
 		return EmptyDateTime
 	}
@@ -127,7 +127,7 @@ func (i IntervalTrigger) NextFireTime(previous, now time.Time) time.Time {
 	return previous.Add(i.Interval)
 }
 
-func (i IntervalTrigger) GetTriggerState(previous, now time.Time) TriggerState {
+func (i *IntervalTrigger) GetTriggerState() TriggerState {
 	return TriggerState{
 		Name: "interval",
 		Interval: IntervalState{
