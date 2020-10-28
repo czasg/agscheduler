@@ -3,6 +3,7 @@ package AGScheduler
 import (
 	"container/list"
 	"errors"
+	"github.com/go-pg/pg/v10"
 	"time"
 )
 
@@ -108,4 +109,45 @@ func (m *MemoryStore) GetNextRunTime() time.Time {
 	}
 	task := m.Tasks.Front().Value.(*Task)
 	return task.NextRunTime
+}
+
+/*
+*	PostGreSQL
+**/
+type PgStore struct {
+	Pg *pg.DB
+}
+
+func NewPgStore(pg *pg.DB) *PgStore {
+	return &PgStore{
+		Pg: pg,
+	}
+}
+
+func (p *PgStore) GetDueTasks(now time.Time) []*Task {
+	return []*Task{}
+}
+
+func (p *PgStore) GetTaskByName(name string) (*Task, error) {
+	return nil, nil
+}
+
+func (p *PgStore) GetAllTasks() []*Task {
+	return []*Task{}
+}
+
+func (p *PgStore) AddTask(task *Task) error {
+	return nil
+}
+
+func (p *PgStore) DelTask(task *Task) error {
+	return nil
+}
+
+func (p *PgStore) UpdateTask(task *Task) error {
+	return nil
+}
+
+func (p *PgStore) GetNextRunTime(now time.Time) time.Time {
+	return EmptyDateTime
 }
