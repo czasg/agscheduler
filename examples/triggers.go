@@ -14,7 +14,7 @@ type Count struct {
 
 func AddCount(args []interface{}) {
 	index := args[0].(int)
-	count := args[0].(*Count)
+	count := args[1].(*Count)
 	switch index {
 	case 0:
 		count.Date += 1
@@ -22,17 +22,16 @@ func AddCount(args []interface{}) {
 		count.Interval += 1
 	case 2:
 		count.Cron += 1
-
-		fmt.Println(count)
 	}
+	fmt.Println(count)
 }
 
 func main() {
 	count := Count{0, 0, 0}
 	now := time.Now()
 	date, _ := AGScheduler.NewDateTrigger(now.Add(time.Minute))
-	interval, _ := AGScheduler.NewIntervalTrigger(now, AGScheduler.EmptyDateTime, time.Second*30)
-	cron, _ := AGScheduler.NewCronTrigger("*/20 * * * *")
+	interval, _ := AGScheduler.NewIntervalTrigger(now, AGScheduler.EmptyDateTime, time.Second*5)
+	cron, _ := AGScheduler.NewCronTrigger("*/10 * * * *")
 
 	dateTask := AGScheduler.NewTask("date", AddCount, []interface{}{0, &count}, date)
 	intervalTask := AGScheduler.NewTask("interval", AddCount, []interface{}{1, &count}, interval)
@@ -44,5 +43,4 @@ func main() {
 	_ = scheduler.AddTask(cronTask)
 
 	scheduler.Start()
-
 }
