@@ -55,7 +55,8 @@ func (s *Scheduler) Start() {
 			syscall.SIGINT,
 			syscall.SIGTERM,
 		)
-		<-ch
+		exitSignal := <-ch
+		logger.Warnf("receive a signal of %v", exitSignal)
 		s.Close()
 	}()
 
@@ -120,8 +121,8 @@ Exit:
 }
 
 func (s *Scheduler) Close() {
-	time.Sleep(time.Second)
 	s.CloseCancel()
+	time.Sleep(time.Second / 2)
 	s.Wake()
 }
 
