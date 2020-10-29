@@ -122,6 +122,9 @@ type PgStore struct {
 }
 
 func NewPgStore(pg *pg.DB) (*PgStore, error) {
+	if len(WorksMap) == 0 {
+		return nil, errors.New("PG instance need define WorksMap")
+	}
 	err := pg.Model((*Task)(nil)).CreateTable(&orm.CreateTableOptions{
 		IfNotExists: true,
 	})
@@ -145,8 +148,15 @@ func (p *PgStore) GetDueTasks(now time.Time) []*Task {
 		}).Errorln(err)
 		return dueTasks
 	}
-	for _, task := range dueTasks {
-		task.Trigger = FromTriggerState(task.TriggerState)
+	for index, task := range dueTasks {
+		workDetail, ok := WorksMap[task.WorkKey]
+		if !ok {
+			continue
+		}
+		trigger := FromTriggerState(task.TriggerState)
+		taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
+		taskIns.WorkKey = task.WorkKey
+		dueTasks[index] = taskIns
 	}
 	return dueTasks
 }
@@ -157,7 +167,13 @@ func (p *PgStore) GetTaskByName(name string) (*Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	task.Trigger = FromTriggerState(task.TriggerState)
+	workDetail, ok := WorksMap[task.WorkKey]
+	if !ok {
+		return nil, errors.New("WorksKey not existed")
+	}
+	trigger := FromTriggerState(task.TriggerState)
+	taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
+	taskIns.WorkKey = task.WorkKey
 	return &task, nil
 }
 
@@ -170,13 +186,27 @@ func (p *PgStore) GetAllTasks() []*Task {
 		}).Errorln(err)
 		return allTasks
 	}
-	for _, task := range allTasks {
-		task.Trigger = FromTriggerState(task.TriggerState)
+	for index, task := range allTasks {
+		workDetail, ok := WorksMap[task.WorkKey]
+		if !ok {
+			continue
+		}
+		trigger := FromTriggerState(task.TriggerState)
+		taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
+		taskIns.WorkKey = task.WorkKey
+		allTasks[index] = taskIns
 	}
 	return allTasks
 }
 
 func (p *PgStore) AddTask(task *Task) error {
+	if task.WorkKey == "" {
+		return errors.New("task not define WorkKey")
+	}
+	_, ok := WorksMap[task.WorkKey]
+	if !ok {
+		return errors.New("WorkKey not existed")
+	}
 	exist, err := p.Pg.Model(&Task{}).Where("name = ?", task.Name).Exists()
 	if err != nil {
 		return err

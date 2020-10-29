@@ -9,6 +9,7 @@ import (
 type Task struct {
 	Id              int64                     `json:"id" pg:",pk"`
 	Name            string                    `json:"name" pg:",use_zero"`
+	WorkKey         string                    `json:"work_key" pg:",use_zero"`
 	Func            func(args ...interface{}) `json:"func" pg:"-"`
 	Args            []interface{}             `json:"args" pg:",use_zero"`
 	Scheduler       *Scheduler                `json:"scheduler" pg:"-"`

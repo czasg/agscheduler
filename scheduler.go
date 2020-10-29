@@ -13,26 +13,16 @@ import (
 
 var EmptyDateTime time.Time
 var MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
-var WorksMapIns = WorksMap{}
-
-type WorksMap map[string]WorkDetail
-
-type WorkDetail struct {
-	Func func(args ...interface{})
-	Args []interface{}
-}
 
 type Scheduler struct {
-	WorksMap    WorksMap
 	StoresMap   map[string]IStore
 	Logger      *logrus.Entry
 	Controller  *Controller
 	CloseCancel context.CancelFunc
 }
 
-func NewScheduler(worksMap WorksMap, store IStore) *Scheduler {
+func NewScheduler(store IStore) *Scheduler {
 	return &Scheduler{
-		WorksMap: worksMap,
 		StoresMap: map[string]IStore{
 			"default": store,
 		},
@@ -123,7 +113,7 @@ Exit:
 
 func (s *Scheduler) Close() {
 	s.CloseCancel()
-	time.Sleep(time.Second / 2)
+	time.Sleep(time.Second)
 	s.Wake()
 }
 
@@ -137,7 +127,7 @@ func (s *Scheduler) AddTask(task *Task) error {
 	})
 	task.Scheduler = s
 	taskName := task.Name
-	_, ok := s.WorksMap[taskName]
+	_, ok := WorksMap[taskName]
 	if ok {
 		return errors.New(taskName + " is conflict with TasksMap")
 	}
@@ -154,11 +144,11 @@ func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, trigger ITrigge
 	logger := s.Logger.WithFields(logrus.Fields{
 		"Func": "AddTaskFromTasksMap",
 	})
-	_, ok := s.WorksMap[name]
+	_, ok := WorksMap[name]
 	if ok {
 		return errors.New(name + " is conflict with TasksMap")
 	}
-	detail, ok := s.WorksMap[taskMapKey]
+	detail, ok := WorksMap[taskMapKey]
 	if !ok {
 		return errors.New(name + " is not define in TasksMap")
 	}

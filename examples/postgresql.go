@@ -18,7 +18,7 @@ func InitPostGreSql() {
 			"FUNC": "remote.GetPGInstance",
 		})
 		pgdb = pg.Connect(&pg.Options{
-			Addr:         "10.251.63.35:5432",
+			Addr:         "localhost:5432",
 			User:         "postgres",
 			Password:     "postgres",
 			Database:     "monitor_edn",
@@ -57,6 +57,16 @@ func AddCount(args ...interface{}) {
 func main() {
 	InitPostGreSql()
 
+	err := AGScheduler.RegisterWorksMap(map[string]AGScheduler.WorkDetail{
+		"add": {
+			Func: AddCount,
+			Args: []interface{}{},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	count := Count{0, 0, 0}
 	now := time.Now()
 	date, _ := AGScheduler.NewDateTrigger(now.Add(time.Minute))
@@ -64,14 +74,17 @@ func main() {
 	cron, _ := AGScheduler.NewCronTrigger("*/10 * * * *")
 
 	dateTask := AGScheduler.NewTask("date", date, AddCount, 0, &count)
+	dateTask.WorkKey = "add"
 	intervalTask := AGScheduler.NewTask("interval", interval, AddCount, 1, &count)
+	intervalTask.WorkKey = "add"
 	cronTask := AGScheduler.NewTask("cron", cron, AddCount, 2, &count)
+	cronTask.WorkKey = "add"
 
 	pgStore, err := AGScheduler.NewPgStore(pgdb)
 	if err != nil {
 		panic(err)
 	}
-	scheduler := AGScheduler.NewScheduler(AGScheduler.WorksMap{}, pgStore)
+	scheduler := AGScheduler.NewScheduler(pgStore)
 	_ = scheduler.AddTask(dateTask)
 	_ = scheduler.AddTask(intervalTask)
 	_ = scheduler.AddTask(cronTask)

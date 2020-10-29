@@ -10,8 +10,7 @@ import (
 
 func TestNewScheduler(t *testing.T) {
 	type args struct {
-		worksMap WorksMap
-		store    IStore
+		store IStore
 	}
 	tests := []struct {
 		name string
@@ -20,14 +19,13 @@ func TestNewScheduler(t *testing.T) {
 		{
 			name: "new",
 			args: args{
-				worksMap: WorksMap{},
-				store:    NewMemoryStore(),
+				store: NewMemoryStore(),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scheduler := NewScheduler(tt.args.worksMap, tt.args.store)
+			scheduler := NewScheduler(tt.args.store)
 			scheduler.Wake()
 		})
 	}
@@ -39,7 +37,6 @@ func TestScheduler_AddTask(t *testing.T) {
 	task := NewTask("task", interval, func(args ...interface{}) {})
 
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -57,7 +54,6 @@ func TestScheduler_AddTask(t *testing.T) {
 		{
 			name: "add",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": NewMemoryStore(),
 				},
@@ -75,7 +71,6 @@ func TestScheduler_AddTask(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -89,11 +84,19 @@ func TestScheduler_AddTask(t *testing.T) {
 }
 
 func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
+	err := RegisterWorksMap(map[string]WorkDetail{
+		"test": WorkDetail{
+			Func: func(args ...interface{}) {},
+			Args: []interface{}{},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
 	now := time.Now()
 	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
 
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -114,12 +117,6 @@ func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
 		{
 			name: "add-from-map",
 			fields: fields{
-				WorksMap: WorksMap{
-					"test": WorkDetail{
-						Func: func(args ...interface{}) {},
-						Args: []interface{}{},
-					},
-				},
 				StoresMap: map[string]IStore{
 					"default": NewMemoryStore(),
 				},
@@ -140,7 +137,6 @@ func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -163,7 +159,6 @@ func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
 
 func TestScheduler_Close(t *testing.T) {
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -176,7 +171,6 @@ func TestScheduler_Close(t *testing.T) {
 		{
 			name: "close",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": NewMemoryStore(),
 				},
@@ -188,7 +182,6 @@ func TestScheduler_Close(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -213,7 +206,6 @@ func TestScheduler_DelTask(t *testing.T) {
 	}
 
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -231,7 +223,6 @@ func TestScheduler_DelTask(t *testing.T) {
 		{
 			name: "del-fail",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": memory1,
 				},
@@ -248,7 +239,6 @@ func TestScheduler_DelTask(t *testing.T) {
 		{
 			name: "del-success",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": memory2,
 				},
@@ -266,7 +256,6 @@ func TestScheduler_DelTask(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -290,7 +279,6 @@ func TestScheduler_GetAllTasks(t *testing.T) {
 	_ = memory.AddTask(task2)
 
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -304,7 +292,6 @@ func TestScheduler_GetAllTasks(t *testing.T) {
 		{
 			name: "del-fail",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": memory,
 				},
@@ -319,7 +306,6 @@ func TestScheduler_GetAllTasks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -340,7 +326,6 @@ func TestScheduler_GetTaskByName(t *testing.T) {
 	_ = memory.AddTask(task)
 
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -359,7 +344,6 @@ func TestScheduler_GetTaskByName(t *testing.T) {
 		{
 			name: "succ",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": memory,
 				},
@@ -377,7 +361,6 @@ func TestScheduler_GetTaskByName(t *testing.T) {
 		{
 			name: "fail",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": NewMemoryStore(),
 				},
@@ -396,7 +379,6 @@ func TestScheduler_GetTaskByName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -416,7 +398,6 @@ func TestScheduler_GetTaskByName(t *testing.T) {
 
 func TestScheduler_Start(t *testing.T) {
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -429,7 +410,6 @@ func TestScheduler_Start(t *testing.T) {
 		{
 			name: "start",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": NewMemoryStore(),
 				},
@@ -441,7 +421,6 @@ func TestScheduler_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -461,7 +440,6 @@ func TestScheduler_UpdateTask(t *testing.T) {
 	_ = memory.AddTask(task)
 
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -479,7 +457,6 @@ func TestScheduler_UpdateTask(t *testing.T) {
 		{
 			name: "update",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": memory,
 				},
@@ -497,7 +474,6 @@ func TestScheduler_UpdateTask(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
@@ -512,7 +488,6 @@ func TestScheduler_UpdateTask(t *testing.T) {
 
 func TestScheduler_Wake(t *testing.T) {
 	type fields struct {
-		WorksMap    WorksMap
 		StoresMap   map[string]IStore
 		Logger      *logrus.Entry
 		Controller  *Controller
@@ -525,7 +500,6 @@ func TestScheduler_Wake(t *testing.T) {
 		{
 			name: "wake",
 			fields: fields{
-				WorksMap: WorksMap{},
 				StoresMap: map[string]IStore{
 					"default": NewMemoryStore(),
 				},
@@ -539,7 +513,6 @@ func TestScheduler_Wake(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Scheduler{
-				WorksMap:    tt.fields.WorksMap,
 				StoresMap:   tt.fields.StoresMap,
 				Logger:      tt.fields.Logger,
 				Controller:  tt.fields.Controller,
