@@ -13,6 +13,7 @@ import (
 
 var EmptyDateTime time.Time
 var MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
+var WorksMapIns = WorksMap{}
 
 type WorksMap map[string]WorkDetail
 

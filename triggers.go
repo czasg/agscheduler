@@ -27,6 +27,31 @@ type IntervalState struct {
 	Interval     time.Duration `json:"interval"`
 }
 
+func FromTriggerState(state TriggerState) ITrigger {
+	switch state.Name {
+	case "date":
+		date, err := NewDateTrigger(state.Date.RunDateTime)
+		if err != nil {
+			return nil
+		}
+		return date
+	case "interval":
+		date, err := NewIntervalTrigger(state.Interval.StartRunTime, state.Interval.EndRunTime, state.Interval.Interval)
+		if err != nil {
+			return nil
+		}
+		return date
+	case "cron":
+		date, err := NewCronTrigger(state.Cron.CronCmd)
+		if err != nil {
+			return nil
+		}
+		return date
+	default:
+		return nil
+	}
+}
+
 /*
 *	Cron
 **/

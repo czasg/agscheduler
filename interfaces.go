@@ -14,4 +14,5 @@ type IStore interface {
 
 type ITrigger interface {
 	NextFireTime(previous, now time.Time) time.Time
+	GetTriggerState() TriggerState
 }

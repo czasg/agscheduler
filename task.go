@@ -13,6 +13,7 @@ type Task struct {
 	Args            []interface{}             `json:"args" pg:",use_zero"`
 	Scheduler       *Scheduler                `json:"scheduler" pg:"-"`
 	Trigger         ITrigger                  `json:"trigger" pg:"-"`
+	TriggerState    TriggerState              `json:"trigger_state" pg:",use_zero"`
 	PreviousRunTime time.Time                 `json:"previous_run_time" pg:",use_zero"`
 	NextRunTime     time.Time                 `json:"next_run_time" pg:",use_zero"`
 	Logger          *logrus.Entry             `json:"logger" pg:"-"`
