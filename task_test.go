@@ -15,7 +15,7 @@ func TestNewTask(t *testing.T) {
 
 	type args struct {
 		name    string
-		method  func(args []interface{})
+		method  func(args ...interface{})
 		args    []interface{}
 		trigger ITrigger
 	}
@@ -27,7 +27,7 @@ func TestNewTask(t *testing.T) {
 			name: "ensure args",
 			args: args{
 				name:    "",
-				method:  func(args []interface{}) {},
+				method:  func(args ...interface{}) {},
 				args:    []interface{}{},
 				trigger: cron,
 			},
@@ -35,7 +35,7 @@ func TestNewTask(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			NewTask(tt.args.name, tt.args.method, tt.args.args, tt.args.trigger)
+			NewTask(tt.args.name, tt.args.trigger, tt.args.method, tt.args.args...)
 		})
 	}
 }
@@ -48,7 +48,7 @@ func TestTask_GetNextFireTime(t1 *testing.T) {
 	type fields struct {
 		Id              int64
 		Name            string
-		Func            func(args []interface{})
+		Func            func(args ...interface{})
 		Args            []interface{}
 		Scheduler       *Scheduler
 		Trigger         ITrigger
@@ -74,7 +74,7 @@ func TestTask_GetNextFireTime(t1 *testing.T) {
 			fields: fields{
 				Id:              1,
 				Name:            "task",
-				Func:            func(args []interface{}) {},
+				Func:            func(args ...interface{}) {},
 				Args:            []interface{}{},
 				Scheduler:       nil,
 				Trigger:         interval,
@@ -96,7 +96,7 @@ func TestTask_GetNextFireTime(t1 *testing.T) {
 			fields: fields{
 				Id:              1,
 				Name:            "task",
-				Func:            func(args []interface{}) {},
+				Func:            func(args ...interface{}) {},
 				Args:            []interface{}{},
 				Scheduler:       nil,
 				Trigger:         date,
@@ -118,7 +118,7 @@ func TestTask_GetNextFireTime(t1 *testing.T) {
 			fields: fields{
 				Id:              1,
 				Name:            "task",
-				Func:            func(args []interface{}) {},
+				Func:            func(args ...interface{}) {},
 				Args:            []interface{}{},
 				Scheduler:       nil,
 				Trigger:         date,
@@ -170,7 +170,7 @@ func TestTask_Go(t1 *testing.T) {
 	type fields struct {
 		Id              int64
 		Name            string
-		Func            func(args []interface{})
+		Func            func(args ...interface{})
 		Args            []interface{}
 		Scheduler       *Scheduler
 		Trigger         ITrigger
@@ -195,7 +195,7 @@ func TestTask_Go(t1 *testing.T) {
 			fields: fields{
 				Id:   1,
 				Name: "task",
-				Func: func(args []interface{}) {
+				Func: func(args ...interface{}) {
 					iChan := args[0].(chan int)
 					iChan <- 0
 				},

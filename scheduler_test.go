@@ -36,7 +36,7 @@ func TestNewScheduler(t *testing.T) {
 func TestScheduler_AddTask(t *testing.T) {
 	now := time.Now()
 	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", func(args []interface{}) {}, []interface{}{}, interval)
+	task := NewTask("task", interval, func(args ...interface{}) {})
 
 	type fields struct {
 		WorksMap    WorksMap
@@ -116,7 +116,7 @@ func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
 			fields: fields{
 				WorksMap: WorksMap{
 					"test": WorkDetail{
-						Func: func(args []interface{}) {},
+						Func: func(args ...interface{}) {},
 						Args: []interface{}{},
 					},
 				},
@@ -146,7 +146,7 @@ func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
 				Controller:  tt.fields.Controller,
 				CloseCancel: tt.fields.CloseCancel,
 			}
-			if err := s.AddTaskFromTasksMap(tt.args.name, tt.args.taskMapKey, tt.args.args, tt.args.trigger); (err != nil) != tt.wantErr {
+			if err := s.AddTaskFromTasksMap(tt.args.name, tt.args.taskMapKey, tt.args.trigger, tt.args.args...); (err != nil) != tt.wantErr {
 				t.Errorf("AddTaskFromTasksMap() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			task, err := s.GetTaskByName("task")
@@ -203,7 +203,7 @@ func TestScheduler_Close(t *testing.T) {
 func TestScheduler_DelTask(t *testing.T) {
 	now := time.Now()
 	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", func(args []interface{}) {}, []interface{}{}, interval)
+	task := NewTask("task", interval, func(args ...interface{}) {})
 
 	memory1 := NewMemoryStore()
 	memory2 := NewMemoryStore()
@@ -282,8 +282,8 @@ func TestScheduler_DelTask(t *testing.T) {
 func TestScheduler_GetAllTasks(t *testing.T) {
 	now := time.Now()
 	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task1 := NewTask("task1", func(args []interface{}) {}, []interface{}{}, interval)
-	task2 := NewTask("task2", func(args []interface{}) {}, []interface{}{}, interval)
+	task1 := NewTask("task1", interval, func(args ...interface{}) {})
+	task2 := NewTask("task2", interval, func(args ...interface{}) {})
 
 	memory := NewMemoryStore()
 	_ = memory.AddTask(task1)
@@ -335,7 +335,7 @@ func TestScheduler_GetAllTasks(t *testing.T) {
 func TestScheduler_GetTaskByName(t *testing.T) {
 	now := time.Now()
 	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", func(args []interface{}) {}, []interface{}{}, interval)
+	task := NewTask("task", interval, func(args ...interface{}) {})
 	memory := NewMemoryStore()
 	_ = memory.AddTask(task)
 
@@ -456,7 +456,7 @@ func TestScheduler_Start(t *testing.T) {
 func TestScheduler_UpdateTask(t *testing.T) {
 	now := time.Now()
 	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", func(args []interface{}) {}, []interface{}{}, interval)
+	task := NewTask("task", interval, func(args ...interface{}) {})
 	memory := NewMemoryStore()
 	_ = memory.AddTask(task)
 

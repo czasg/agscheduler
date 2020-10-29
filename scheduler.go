@@ -17,7 +17,7 @@ var MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
 type WorksMap map[string]WorkDetail
 
 type WorkDetail struct {
-	Func func(args []interface{})
+	Func func(args ...interface{})
 	Args []interface{}
 }
 
@@ -149,7 +149,7 @@ func (s *Scheduler) AddTask(task *Task) error {
 	return nil
 }
 
-func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interface{}, trigger ITrigger) error {
+func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, trigger ITrigger, args ...interface{}) error {
 	logger := s.Logger.WithFields(logrus.Fields{
 		"Func": "AddTaskFromTasksMap",
 	})
@@ -164,7 +164,7 @@ func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, args []interfac
 	if len(args) == 0 {
 		args = detail.Args
 	}
-	task := NewTask(name, detail.Func, args, trigger)
+	task := NewTask(name, trigger, detail.Func, args...)
 	err := s.AddTask(task)
 	if err != nil {
 		return err

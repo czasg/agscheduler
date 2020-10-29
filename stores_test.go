@@ -33,9 +33,8 @@ func TestMemoryStore_AddTask(t *testing.T) {
 			args: args{
 				task: NewTask(
 					"task",
-					func(args []interface{}) {},
-					[]interface{}{},
 					interval,
+					func(args ...interface{}) {},
 				),
 			},
 			wantErr: false,
@@ -63,9 +62,8 @@ func TestMemoryStore_DelTask(t *testing.T) {
 
 	task := NewTask(
 		"task",
-		func(args []interface{}) {},
-		[]interface{}{},
 		interval,
+		func(args ...interface{}) {},
 	)
 
 	taskList := list.New()
@@ -120,8 +118,8 @@ func TestMemoryStore_DelTask(t *testing.T) {
 func TestMemoryStore_GetAllTasks(t *testing.T) {
 	cron, _ := NewCronTrigger("* * * * *")
 
-	task1 := NewTask("task1", func(args []interface{}) {}, []interface{}{}, cron)
-	task2 := NewTask("task2", func(args []interface{}) {}, []interface{}{}, cron)
+	task1 := NewTask("task1", cron, func(args ...interface{}) {})
+	task2 := NewTask("task2", cron, func(args ...interface{}) {})
 
 	taskList := list.New()
 	ele1 := taskList.PushBack(task1)
@@ -167,8 +165,8 @@ func TestMemoryStore_GetDueTasks(t *testing.T) {
 	trigger1, _ := NewIntervalTrigger(now, EmptyDateTime, time.Minute)
 	trigger2, _ := NewIntervalTrigger(now, EmptyDateTime, time.Hour)
 
-	task1 := NewTask("task1", func(args []interface{}) {}, []interface{}{}, trigger1)
-	task2 := NewTask("task2", func(args []interface{}) {}, []interface{}{}, trigger2)
+	task1 := NewTask("task1", trigger1, func(args ...interface{}) {})
+	task2 := NewTask("task2", trigger2, func(args ...interface{}) {})
 
 	taskList := list.New()
 	ele1 := taskList.PushBack(task1)
@@ -237,8 +235,8 @@ func TestMemoryStore_GetNextRunTime(t *testing.T) {
 	trigger1, _ := NewIntervalTrigger(now, EmptyDateTime, time.Minute)
 	trigger2, _ := NewIntervalTrigger(now, EmptyDateTime, time.Hour)
 
-	task1 := NewTask("task1", func(args []interface{}) {}, []interface{}{}, trigger1)
-	task2 := NewTask("task2", func(args []interface{}) {}, []interface{}{}, trigger2)
+	task1 := NewTask("task1", trigger1, func(args ...interface{}) {})
+	task2 := NewTask("task2", trigger2, func(args ...interface{}) {})
 
 	taskList := list.New()
 	ele1 := taskList.PushBack(task1)
@@ -283,8 +281,8 @@ func TestMemoryStore_GetTaskByName(t *testing.T) {
 	trigger1, _ := NewIntervalTrigger(now, EmptyDateTime, time.Minute)
 	trigger2, _ := NewIntervalTrigger(now, EmptyDateTime, time.Hour)
 
-	task1 := NewTask("task1", func(args []interface{}) {}, []interface{}{}, trigger1)
-	task2 := NewTask("task2", func(args []interface{}) {}, []interface{}{}, trigger2)
+	task1 := NewTask("task1", trigger1, func(args ...interface{}) {})
+	task2 := NewTask("task2", trigger2, func(args ...interface{}) {})
 
 	taskList := list.New()
 	ele1 := taskList.PushBack(task1)
@@ -343,9 +341,9 @@ func TestMemoryStore_UpdateTask(t *testing.T) {
 	trigger1, _ := NewIntervalTrigger(now, EmptyDateTime, time.Minute)
 	trigger2, _ := NewIntervalTrigger(now, EmptyDateTime, time.Hour)
 
-	task1 := NewTask("task1", func(args []interface{}) {}, []interface{}{}, trigger1)
+	task1 := NewTask("task1", trigger1, func(args ...interface{}) {})
 	task1.PreviousRunTime = now
-	task2 := NewTask("task2", func(args []interface{}) {}, []interface{}{}, trigger2)
+	task2 := NewTask("task2", trigger2, func(args ...interface{}) {})
 	task2.PreviousRunTime = now
 
 	taskList := list.New()
