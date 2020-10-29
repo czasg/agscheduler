@@ -42,10 +42,8 @@ func TestNewTask(t *testing.T) {
 
 func TestTask_GetNextFireTime(t1 *testing.T) {
 	now := time.Now()
-	interval, err := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	if err != nil {
-		panic(err)
-	}
+	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
+	date, _ := NewDateTrigger(now)
 
 	type fields struct {
 		Id              int64
@@ -72,7 +70,7 @@ func TestTask_GetNextFireTime(t1 *testing.T) {
 		want   time.Time
 	}{
 		{
-			name: "test",
+			name: "test-interval",
 			fields: fields{
 				Id:              1,
 				Name:            "task",
@@ -92,6 +90,50 @@ func TestTask_GetNextFireTime(t1 *testing.T) {
 				now: now,
 			},
 			want: now,
+		},
+		{
+			name: "test-date-succ",
+			fields: fields{
+				Id:              1,
+				Name:            "task",
+				Func:            func(args []interface{}) {},
+				Args:            []interface{}{},
+				Scheduler:       nil,
+				Trigger:         date,
+				PreviousRunTime: EmptyDateTime,
+				NextRunTime:     EmptyDateTime,
+				Logger:          nil,
+				Running:         true,
+				Coalesce:        true,
+				Count:           0,
+				ErrorCount:      0,
+			},
+			args: args{
+				now: now,
+			},
+			want: now,
+		},
+		{
+			name: "test-date-empty",
+			fields: fields{
+				Id:              1,
+				Name:            "task",
+				Func:            func(args []interface{}) {},
+				Args:            []interface{}{},
+				Scheduler:       nil,
+				Trigger:         date,
+				PreviousRunTime: now,
+				NextRunTime:     EmptyDateTime,
+				Logger:          nil,
+				Running:         true,
+				Coalesce:        true,
+				Count:           0,
+				ErrorCount:      0,
+			},
+			args: args{
+				now: now,
+			},
+			want: EmptyDateTime,
 		},
 	}
 	for _, tt := range tests {

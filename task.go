@@ -88,6 +88,9 @@ func (t *Task) GetNextFireTime(now time.Time) time.Time {
 		return MaxDateTime
 	}
 	t.NextRunTime = t.Trigger.NextFireTime(t.PreviousRunTime, now)
+	if t.NextRunTime.Equal(EmptyDateTime) {
+		return t.NextRunTime
+	}
 	if t.Coalesce && t.NextRunTime.Before(now) {
 		t.NextRunTime = now.Add(-time.Duration(1))
 	}
