@@ -59,15 +59,10 @@ func (s *Scheduler) Start() {
 		s.Close()
 	}()
 
-	exit := false
 	for {
-		if exit {
-			break
-		}
 		select {
 		case <-closeContext.Done():
-			logger.Warning("AGScheduler server closed")
-			exit = true
+			goto Exit
 		default:
 			now := time.Now()
 			nextCallTime := time.Time{}
@@ -120,6 +115,8 @@ func (s *Scheduler) Start() {
 			}
 		}
 	}
+Exit:
+	logger.Warning("AGScheduler server closed")
 }
 
 func (s *Scheduler) Close() {
