@@ -27,28 +27,28 @@ type IntervalState struct {
 	Interval     time.Duration `json:"interval"`
 }
 
-func FromTriggerState(state TriggerState) ITrigger {
+func FromTriggerState(state TriggerState) (ITrigger, error) {
 	switch state.Name {
 	case "date":
 		date, err := NewDateTrigger(state.Date.RunDateTime)
 		if err != nil {
-			return nil
+			return nil, err
 		}
-		return date
+		return date, nil
 	case "interval":
 		date, err := NewIntervalTrigger(state.Interval.StartRunTime, state.Interval.EndRunTime, state.Interval.Interval)
 		if err != nil {
-			return nil
+			return nil, err
 		}
-		return date
+		return date, nil
 	case "cron":
 		date, err := NewCronTrigger(state.Cron.CronCmd)
 		if err != nil {
-			return nil
+			return nil, err
 		}
-		return date
+		return date, nil
 	default:
-		return nil
+		return nil, errors.New("unsupported state of " + state.Name)
 	}
 }
 

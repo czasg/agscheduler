@@ -153,8 +153,16 @@ func (p *PgStore) GetDueTasks(now time.Time) []*Task {
 		if !ok {
 			continue
 		}
-		trigger := FromTriggerState(task.TriggerState)
-		taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
+		trigger, err := FromTriggerState(task.TriggerState)
+		if err != nil {
+			continue
+		}
+		taskIns := &Task{}
+		if len(task.Args) == 0 {
+			taskIns = NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
+		} else {
+			taskIns = NewTask(task.Name, trigger, workDetail.Func, task.Args...)
+		}
 		taskIns.WorkKey = task.WorkKey
 		dueTasks[index] = taskIns
 	}
@@ -171,7 +179,10 @@ func (p *PgStore) GetTaskByName(name string) (*Task, error) {
 	if !ok {
 		return nil, errors.New("WorksKey not existed")
 	}
-	trigger := FromTriggerState(task.TriggerState)
+	trigger, err := FromTriggerState(task.TriggerState)
+	if err != nil {
+		return nil, err
+	}
 	taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
 	taskIns.WorkKey = task.WorkKey
 	return &task, nil
@@ -191,7 +202,10 @@ func (p *PgStore) GetAllTasks() []*Task {
 		if !ok {
 			continue
 		}
-		trigger := FromTriggerState(task.TriggerState)
+		trigger, err := FromTriggerState(task.TriggerState)
+		if err != nil {
+			continue
+		}
 		taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
 		taskIns.WorkKey = task.WorkKey
 		allTasks[index] = taskIns
