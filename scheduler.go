@@ -62,8 +62,7 @@ func (s *Scheduler) Start() {
 				{
 					dueTasks := store.GetDueTasks(now) // Gets the tasks that should be scheduled
 					for _, dueTask := range dueTasks {
-						dueTaskRunTime := dueTask.GetNextFireTime(now)
-						dueTask.Go(dueTaskRunTime)
+						dueTask.Go(now)
 						dueTaskNextRunTime := dueTask.GetNextFireTime(now)
 						if dueTaskNextRunTime.Equal(EmptyDateTime) {
 							err := store.DelTask(dueTask)

@@ -230,7 +230,6 @@ func TestTask_Go(t1 *testing.T) {
 				Running:         tt.fields.Running,
 				Coalesce:        tt.fields.Coalesce,
 				Count:           tt.fields.Count,
-				ErrorCount:      tt.fields.ErrorCount,
 			}
 			t.Go(now)
 			<-intChan

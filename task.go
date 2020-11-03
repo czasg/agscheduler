@@ -20,8 +20,7 @@ type Task struct {
 	Logger          *logrus.Entry             `json:"logger" pg:"-"`
 	Running         bool                      `json:"running" pg:",use_zero"`
 	Coalesce        bool                      `json:"coalesce" pg:",use_zero"`
-	Count           int64                     `json:"cound" pg:",use_zero"`
-	ErrorCount      int64                     `json:"error_count" pg:",use_zero"`
+	Count           int64                     `json:"count" pg:",use_zero"`
 }
 
 func NewTask(
@@ -47,11 +46,10 @@ func NewTask(
 
 func (t *Task) Go(runTime time.Time) {
 	t.PreviousRunTime = runTime
+	t.Count += 1
 	go func() {
 		defer func() {
-			t.Count += 1
 			if r := recover(); r != nil {
-				t.ErrorCount += 1
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]

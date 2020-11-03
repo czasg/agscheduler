@@ -14,7 +14,7 @@ func RegisterWorksMap(worksMap map[string]WorkDetail) error {
 		WorksMap = worksMap
 		return nil
 	}
-	for name, _ := range worksMap {
+	for name := range worksMap {
 		_, ok := WorksMap[name]
 		if ok {
 			return errors.New(name + " has existed")

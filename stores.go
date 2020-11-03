@@ -121,6 +121,20 @@ type PgStore struct {
 	Logger *logrus.Entry
 }
 
+func FromPgTask(pgTask *Task, trigger ITrigger, workDetail WorkDetail) *Task {
+	var task *Task
+	if len(pgTask.Args) == 0 {
+		task = NewTask(pgTask.Name, trigger, workDetail.Func, workDetail.Args...)
+	} else {
+		task = NewTask(pgTask.Name, trigger, workDetail.Func, pgTask.Args...)
+	}
+	task.WorkKey = pgTask.WorkKey
+	task.Running = pgTask.Running
+	task.Coalesce = pgTask.Coalesce
+	task.Count = pgTask.Count
+	return task
+}
+
 func NewPgStore(pg *pg.DB) (*PgStore, error) {
 	if len(WorksMap) == 0 {
 		return nil, errors.New("PG instance need define WorksMap")
@@ -157,14 +171,7 @@ func (p *PgStore) GetDueTasks(now time.Time) []*Task {
 		if err != nil {
 			continue
 		}
-		taskIns := &Task{}
-		if len(task.Args) == 0 {
-			taskIns = NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
-		} else {
-			taskIns = NewTask(task.Name, trigger, workDetail.Func, task.Args...)
-		}
-		taskIns.WorkKey = task.WorkKey
-		dueTasks[index] = taskIns
+		dueTasks[index] = FromPgTask(task, trigger, workDetail)
 	}
 	return dueTasks
 }
@@ -183,9 +190,7 @@ func (p *PgStore) GetTaskByName(name string) (*Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
-	taskIns.WorkKey = task.WorkKey
-	return &task, nil
+	return FromPgTask(&task, trigger, workDetail), nil
 }
 
 func (p *PgStore) GetAllTasks() []*Task {
@@ -206,9 +211,7 @@ func (p *PgStore) GetAllTasks() []*Task {
 		if err != nil {
 			continue
 		}
-		taskIns := NewTask(task.Name, trigger, workDetail.Func, workDetail.Args...)
-		taskIns.WorkKey = task.WorkKey
-		allTasks[index] = taskIns
+		allTasks[index] = FromPgTask(task, trigger, workDetail)
 	}
 	return allTasks
 }
@@ -242,11 +245,11 @@ func (p *PgStore) DelTask(task *Task) error {
 }
 
 func (p *PgStore) UpdateTask(task *Task) error {
+	task.TriggerState = task.Trigger.GetTriggerState()
 	_, err := p.Pg.Model(task).Where("name = ?name").Update()
 	if err != nil {
 		return err
 	}
-	task.TriggerState = task.Trigger.GetTriggerState()
 	return nil
 }
 
