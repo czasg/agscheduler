@@ -128,6 +128,7 @@ func FromPgTask(pgTask *Task, trigger ITrigger, workDetail WorkDetail) *Task {
 	} else {
 		task = NewTask(pgTask.Name, trigger, workDetail.Func, pgTask.Args...)
 	}
+	task.TriggerState = pgTask.TriggerState
 	task.WorkKey = pgTask.WorkKey
 	task.Running = pgTask.Running
 	task.Coalesce = pgTask.Coalesce
