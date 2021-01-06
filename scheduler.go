@@ -169,6 +169,7 @@ func (s *Scheduler) GetTaskByName(name string) (*Task, error) {
 		if err != nil {
 			continue
 		}
+		task.Scheduler = s
 		return task, nil
 	}
 	return nil, errors.New("not found task")
