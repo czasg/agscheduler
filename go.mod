@@ -1,4 +1,4 @@
-module github.com/CzaOrz/AGScheduler
+module github.com/czaorz/agscheduler
 
 go 1.14
 
