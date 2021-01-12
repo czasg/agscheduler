@@ -2,6 +2,7 @@ package agscheduler
 
 import (
 	"github.com/sirupsen/logrus"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -75,39 +76,33 @@ func TestJob_GetRunTimes(t *testing.T) {
 		want   []time.Time
 	}{
 		{
-			name: "pass",
+			name: "date pass",
 			fields: fields{
 				Trigger: &DateTrigger{NextRunTime: now.Add(time.Second)},
 			},
 			args: args{
 				now: now,
 			},
-			want: []time.Time{},
+			want: []time.Time{now.Add(time.Second)},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &Job{
-				Trigger: tt.fields.Trigger,
+				Id:           tt.fields.Id,
+				Name:         tt.fields.Name,
+				Task:         tt.fields.Task,
+				Trigger:      tt.fields.Trigger,
+				Status:       tt.fields.Status,
+				Coalesce:     tt.fields.Coalesce,
+				MaxInstances: tt.fields.MaxInstances,
+				Scheduler:    tt.fields.Scheduler,
+				NextRunTime:  tt.fields.NextRunTime,
+				Logger:       tt.fields.Logger,
 			}
-			j.FillByDefault()
-			j.GetRunTimes(now) // todo, System Panic
-			//j := &Job{
-			//	Id:           tt.fields.Id,
-			//	Name:         tt.fields.Name,
-			//	Task:         tt.fields.Task,
-			//	Trigger:      tt.fields.Trigger,
-			//	Status:       tt.fields.Status,
-			//	Coalesce:     tt.fields.Coalesce,
-			//	MaxInstances: tt.fields.MaxInstances,
-			//	Scheduler:    tt.fields.Scheduler,
-			//	NextRunTime:  tt.fields.NextRunTime,
-			//	Logger:       tt.fields.Logger,
-			//}
-			//fmt.Println(j.GetRunTimes(now))
-			//if got := j.GetRunTimes(tt.args.now); !reflect.DeepEqual(got, tt.want) {
-			//	t.Errorf("GetRunTimes() = %v, want %v", got, tt.want)
-			//}
+			if got := j.GetRunTimes(tt.args.now); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetRunTimes() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

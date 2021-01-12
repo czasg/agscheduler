@@ -1,9 +1,12 @@
 package agscheduler
 
 import (
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"time"
+)
+
+var (
+	MaxTolerance = 1024
 )
 
 type ITask interface {
@@ -31,12 +34,19 @@ func (j *Job) FillByDefault() {
 }
 
 func (j *Job) GetRunTimes(now time.Time) []time.Time {
-	runTimes := []time.Time{}
-	nextRunTime := j.NextRunTime
+	var (
+		runTimes    = []time.Time{}
+		nextRunTime = j.NextRunTime
+		tolerance   = 0
+	)
 	for {
-		nextRunTime := j.Trigger.GetNextRunTime(nextRunTime, now)
-		fmt.Println(nextRunTime)
+		nextRunTime = j.Trigger.GetNextRunTime(nextRunTime, now)
 		if nextRunTime.Equal(MinDateTime) {
+			break
+		}
+		tolerance++
+		if tolerance >= MaxTolerance {
+			j.Logger.Warningln("Abnormal RunTimes, Please Ensure Trigger Right.")
 			break
 		}
 		runTimes = append(runTimes, nextRunTime)
