@@ -4,11 +4,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//var (
-//	MinDateTime = time.Time{}
-//	MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
-//)
-
 type AGScheduler struct {
 	Store  IStore
 	Logger *logrus.Entry
@@ -20,9 +15,7 @@ func (ags *AGScheduler) FillByDefault() {
 		ags.Store = &MemoryStore{}
 	}
 	if ags.Logger == nil {
-		ags.Logger = Log.WithFields(logrus.Fields{
-			"ASGModule": "Scheduler",
-		})
+		ags.Logger = Log.WithFields(GenASGModule("scheduler"))
 	}
 }
 
