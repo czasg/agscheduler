@@ -76,14 +76,49 @@ func TestJob_GetRunTimes(t *testing.T) {
 		want   []time.Time
 	}{
 		{
-			name: "date pass",
+			name: "date empty",
 			fields: fields{
 				Trigger: &DateTrigger{NextRunTime: now.Add(time.Second)},
 			},
 			args: args{
 				now: now,
 			},
+			want: []time.Time{},
+		},
+		{
+			name: "date pass",
+			fields: fields{
+				Trigger: &DateTrigger{NextRunTime: now.Add(time.Second)},
+			},
+			args: args{
+				now: now.Add(time.Minute),
+			},
 			want: []time.Time{now.Add(time.Second)},
+		},
+		{
+			name: "interval now",
+			fields: fields{
+				Trigger: &IntervalTrigger{
+					Interval: time.Minute,
+				},
+			},
+			args: args{
+				now: now,
+			},
+			want: []time.Time{now},
+		},
+		{
+			name: "interval pass",
+			fields: fields{
+				Trigger: &IntervalTrigger{
+					Interval:     time.Second,
+					StartRunTime: now.Add(-time.Second * 2),
+				},
+			},
+			args: args{
+				now: now,
+			},
+			want: []time.Time{now.Add(-time.Second * 2), now.Add(-time.Second), now},
 		},
 	}
 	for _, tt := range tests {

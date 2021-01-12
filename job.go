@@ -34,6 +34,7 @@ func (j *Job) FillByDefault() {
 }
 
 func (j *Job) GetRunTimes(now time.Time) []time.Time {
+	j.FillByDefault()
 	var (
 		runTimes    = []time.Time{}
 		nextRunTime = j.NextRunTime
@@ -41,6 +42,9 @@ func (j *Job) GetRunTimes(now time.Time) []time.Time {
 	)
 	for {
 		nextRunTime = j.Trigger.GetNextRunTime(nextRunTime, now)
+		if nextRunTime.After(now) {
+			break
+		}
 		if nextRunTime.Equal(MinDateTime) {
 			break
 		}
