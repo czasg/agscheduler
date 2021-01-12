@@ -1,6 +1,7 @@
 package agscheduler
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"time"
 )
@@ -27,4 +28,18 @@ func (j *Job) FillByDefault() {
 	if j.Logger == nil {
 		j.Logger = Log.WithFields(GenASGModule("job"))
 	}
+}
+
+func (j *Job) GetRunTimes(now time.Time) []time.Time {
+	runTimes := []time.Time{}
+	nextRunTime := j.NextRunTime
+	for {
+		nextRunTime := j.Trigger.GetNextRunTime(nextRunTime, now)
+		fmt.Println(nextRunTime)
+		if nextRunTime.Equal(MinDateTime) {
+			break
+		}
+		runTimes = append(runTimes, nextRunTime)
+	}
+	return runTimes
 }
