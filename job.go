@@ -5,7 +5,8 @@ type ITask interface {
 }
 
 type Job struct {
-	Id   int64  `json:"id" pg:",pk"`
-	Name string `json:"name" pg:",use_zero"`
-	Task ITask  `json:"-" pg:"-"`
+	Id        int64       `json:"id" pg:",pk"`
+	Name      string      `json:"name" pg:",use_zero"`
+	Task      ITask       `json:"-" pg:"-"`
+	Scheduler AGScheduler `json:"-" pg:"-"`
 }
