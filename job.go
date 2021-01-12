@@ -2,12 +2,37 @@ package agscheduler
 
 import (
 	"github.com/sirupsen/logrus"
+	"sync"
 	"time"
 )
 
 var (
 	MaxTolerance = 1024
+	InstanceLock = sync.Mutex{}
+	InstanceMap  = map[string]int{}
 )
+
+func IncreaseInstance(key string) int {
+	InstanceLock.Lock()
+	defer InstanceLock.Unlock()
+	instance, ok := InstanceMap[key]
+	if !ok {
+		instance = 0
+	}
+	InstanceMap[key] = instance + 1
+	return instance
+}
+
+func ReduceInstance(key string) int {
+	InstanceLock.Lock()
+	defer InstanceLock.Unlock()
+	instance, ok := InstanceMap[key]
+	if !ok {
+		return 0
+	}
+	InstanceMap[key] = instance - 1
+	return instance
+}
 
 type ITask interface {
 	Run()
@@ -29,7 +54,31 @@ type Job struct {
 
 func (j *Job) FillByDefault() {
 	if j.Logger == nil {
-		j.Logger = Log.WithFields(GenASGModule("job"))
+		j.Logger = Log.WithFields(GenASGModule("job")).WithField("JobName", j.Name)
+	}
+}
+
+func (j *Job) Run(runTimes []time.Time) {
+	j.FillByDefault()
+	for _, runTime := range runTimes {
+		logger := j.Logger.WithFields(logrus.Fields{"RunTime": runTime})
+		instance := IncreaseInstance(j.Name)
+		if instance > j.MaxInstances {
+			logger.WithFields(logrus.Fields{"MaxInstances": j.MaxInstances + 1}).
+				Warningln("Out Of MaxInstances, ignore this scheduler")
+			break
+		}
+		go func() {
+			logger.Debugln("task run")
+			defer func() {
+				ReduceInstance(j.Name)
+				if r := recover(); r != nil {
+					logger.WithFields(logrus.Fields{"TaskRecover": r}).
+						Errorln("Panic! please ensure task right.")
+				}
+			}()
+			j.Task.Run()
+		}()
 	}
 }
 
