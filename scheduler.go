@@ -2,30 +2,17 @@ package agscheduler
 
 import (
 	"github.com/sirupsen/logrus"
-	"math"
-	"time"
 )
 
-type STATUS int64
-
-var (
-	AGSLog = logrus.New()
-	Log    = AGSLog.WithFields(logrus.Fields{
-		"AGSVersion": Version,
-	})
-	STATUS_RUNNING = STATUS(0)
-	STATUS_PAUSED  = STATUS(1)
-	STATUS_STOPPED = STATUS(2)
-)
-
-var (
-	MinDateTime = time.Time{}
-	MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
-)
+//var (
+//	MinDateTime = time.Time{}
+//	MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
+//)
 
 type AGScheduler struct {
 	Store  IStore
 	Logger *logrus.Entry
+	Status STATUS
 }
 
 func (ags *AGScheduler) FillByDefault() {
@@ -41,6 +28,7 @@ func (ags *AGScheduler) FillByDefault() {
 
 func (ags *AGScheduler) Start() {
 	ags.FillByDefault()
+	ags.Status.SetRunning()
 }
 
 func (ags *AGScheduler) Close() error {

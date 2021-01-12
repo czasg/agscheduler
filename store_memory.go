@@ -19,7 +19,7 @@ func (ms *MemoryStore) FillByDefault() {
 	}
 }
 
-func (ms *MemoryStore) GetSchedulingJobs() ([]*Job, error) {
+func (ms *MemoryStore) GetSchedulingJobs(now time.Time) ([]*Job, error) {
 	ms.FillByDefault()
 	return nil, nil
 }
