@@ -1,6 +1,7 @@
 package agscheduler
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -41,7 +42,7 @@ func DeleteInstance(key string) {
 }
 
 type ITask interface {
-	Run()
+	Run(ctx context.Context)
 }
 
 type Job struct {
@@ -83,7 +84,7 @@ func (j *Job) Run(runTimes []time.Time) {
 						Errorln("Panic! please ensure task right.")
 				}
 			}()
-			j.Task.Run()
+			j.Task.Run(j.Scheduler.Context)
 		}()
 	}
 }
