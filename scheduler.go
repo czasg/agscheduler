@@ -26,6 +26,8 @@ func (ags *AGScheduler) Start() {
 
 func (ags *AGScheduler) Close() error {
 	ags.FillByDefault()
+	ags.Status.SetPaused()
+	ags.Status.SetStopped()
 	return nil
 }
 

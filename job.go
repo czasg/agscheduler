@@ -34,6 +34,12 @@ func ReduceInstance(key string) int {
 	return instance
 }
 
+func DeleteInstance(key string) {
+	InstanceLock.Lock()
+	defer InstanceLock.Unlock()
+	delete(InstanceMap, key)
+}
+
 type ITask interface {
 	Run()
 }
