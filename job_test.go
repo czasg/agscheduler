@@ -14,7 +14,7 @@ func TestJob_FillByDefault(t *testing.T) {
 		Task         ITask
 		Trigger      ITrigger
 		Status       STATUS
-		Coalesce     bool
+		NotCoalesce  bool
 		MaxInstances int
 		Scheduler    AGScheduler
 		NextRunTime  time.Time
@@ -37,7 +37,7 @@ func TestJob_FillByDefault(t *testing.T) {
 				Task:         tt.fields.Task,
 				Trigger:      tt.fields.Trigger,
 				Status:       tt.fields.Status,
-				Coalesce:     tt.fields.Coalesce,
+				NotCoalesce:  tt.fields.NotCoalesce,
 				MaxInstances: tt.fields.MaxInstances,
 				Scheduler:    tt.fields.Scheduler,
 				NextRunTime:  tt.fields.NextRunTime,
@@ -45,7 +45,7 @@ func TestJob_FillByDefault(t *testing.T) {
 			}
 			j.FillByDefault()
 			logStr, _ := j.Logger.String()
-			if logStr != "time=\"0001-01-01T00:00:00Z\" level=panic AGSVersion=0.0.1 ASGModule=job\n" {
+			if logStr != "time=\"0001-01-01T00:00:00Z\" level=panic AGSVersion=0.0.1 ASGModule=job JobName=\n" {
 				t.Errorf("GetRunTimes() = %v, want %v", logStr, "time=\"0001-01-01T00:00:00Z\" level=panic AGSVersion=0.0.1 ASGModule=job\n")
 			}
 		})
@@ -60,7 +60,7 @@ func TestJob_GetRunTimes(t *testing.T) {
 		Task         ITask
 		Trigger      ITrigger
 		Status       STATUS
-		Coalesce     bool
+		NotCoalesce  bool
 		MaxInstances int
 		Scheduler    AGScheduler
 		NextRunTime  time.Time
@@ -105,7 +105,7 @@ func TestJob_GetRunTimes(t *testing.T) {
 			args: args{
 				now: now,
 			},
-			want: []time.Time{now},
+			want: []time.Time{now.Add(-time.Nanosecond)},
 		},
 		{
 			name: "interval pass",
@@ -129,7 +129,7 @@ func TestJob_GetRunTimes(t *testing.T) {
 				Task:         tt.fields.Task,
 				Trigger:      tt.fields.Trigger,
 				Status:       tt.fields.Status,
-				Coalesce:     tt.fields.Coalesce,
+				NotCoalesce:  tt.fields.NotCoalesce,
 				MaxInstances: tt.fields.MaxInstances,
 				Scheduler:    tt.fields.Scheduler,
 				NextRunTime:  tt.fields.NextRunTime,

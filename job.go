@@ -51,7 +51,7 @@ type Job struct {
 	Task         ITask    `json:"-" pg:"-"`
 	Trigger      ITrigger `json:"-" pg:"-"`
 	Status       STATUS   `json:"status" pg:",use_zero"`
-	Coalesce     bool     `json:"coalesce" pg:",use_zero"`
+	NotCoalesce  bool     `json:"not_coalesce" pg:",use_zero"`
 	MaxInstances int      `json:"max_instances" pg:",use_zero"`
 	/* should be init by AGS. */
 	Scheduler   AGScheduler   `json:"-" pg:"-"`
@@ -60,6 +60,12 @@ type Job struct {
 }
 
 func (j *Job) FillByDefault() {
+	if j.Trigger == nil {
+		j.Trigger = DateTrigger{NextRunTime: time.Now()}
+	}
+	if j.NextRunTime == MinDateTime {
+		j.NextRunTime = j.Trigger.GetNextRunTime(MinDateTime, time.Now())
+	}
 	if j.Logger == nil {
 		j.Logger = Log.WithFields(GenASGModule("job")).WithField("JobName", j.Name)
 	}
@@ -97,7 +103,6 @@ func (j *Job) GetRunTimes(now time.Time) []time.Time {
 		tolerance   = 0
 	)
 	for {
-		nextRunTime = j.Trigger.GetNextRunTime(nextRunTime, now)
 		if nextRunTime.After(now) {
 			break
 		}
@@ -110,6 +115,7 @@ func (j *Job) GetRunTimes(now time.Time) []time.Time {
 			break
 		}
 		runTimes = append(runTimes, nextRunTime)
+		nextRunTime = j.Trigger.GetNextRunTime(nextRunTime, now)
 	}
 	return runTimes
 }

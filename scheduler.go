@@ -48,7 +48,7 @@ func (ags *AGScheduler) Start() {
 		}
 		for _, job := range jobs {
 			runTimes := job.GetRunTimes(now)
-			if len(runTimes) > 1 && job.Coalesce {
+			if len(runTimes) > 1 && !job.NotCoalesce {
 				runTimes = runTimes[len(runTimes)-1:]
 			}
 			job.Run(runTimes)
@@ -97,4 +97,15 @@ func (ags *AGScheduler) Close() error {
 	ags.Status.SetPaused()
 	ags.Status.SetStopped()
 	return nil
+}
+
+func (ags *AGScheduler) AddJob(job *Job) (err error) {
+	ags.FillByDefault()
+	job.FillByDefault()
+	err = ags.Store.AddJob(job)
+	if err != nil {
+		return
+	}
+	defer ags.Wake()
+	return
 }

@@ -27,7 +27,7 @@ func TestIntervalTrigger_GetNextRunTime(t1 *testing.T) {
 			name:   "test end time",
 			fields: fields{},
 			args:   args{},
-			want:   MinDateTime,
+			want:   MinDateTime.Add(-time.Nanosecond),
 		},
 		{
 			name: "test start time",
@@ -43,7 +43,7 @@ func TestIntervalTrigger_GetNextRunTime(t1 *testing.T) {
 			args: args{
 				now: now,
 			},
-			want: now,
+			want: now.Add(-time.Nanosecond),
 		},
 		{
 			name: "test pass",

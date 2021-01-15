@@ -17,7 +17,7 @@ func (t IntervalTrigger) GetNextRunTime(previous, now time.Time) time.Time {
 	}
 	if previous.Equal(MinDateTime) {
 		if t.StartRunTime.Equal(MinDateTime) {
-			t.StartRunTime = now
+			t.StartRunTime = now.Add(-time.Nanosecond)
 		}
 		return t.StartRunTime
 	}
