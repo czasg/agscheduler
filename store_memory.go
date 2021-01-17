@@ -3,6 +3,7 @@ package agscheduler
 import (
 	"container/list"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"reflect"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ var JobsMapLock = sync.Mutex{}
 type MemoryStore struct {
 	Jobs    *list.List
 	JobsMap map[string]*list.Element
+	Logger  *logrus.Entry
 }
 
 func (ms *MemoryStore) FillByDefault() {
@@ -21,6 +23,9 @@ func (ms *MemoryStore) FillByDefault() {
 	}
 	if ms.JobsMap == nil {
 		ms.JobsMap = map[string]*list.Element{}
+	}
+	if ms.Logger == nil {
+		ms.Logger = AGSLog.WithFields(GenASGModule("storeMemory"))
 	}
 }
 
@@ -38,6 +43,10 @@ func (ms *MemoryStore) GetSchedulingJobs(now time.Time) ([]*Job, error) {
 		}
 		break
 	}
+	ms.Logger.WithFields(logrus.Fields{
+		"Func":    "GetSchedulingJobs",
+		"JobsNum": len(jobs),
+	}).Debugln("OK")
 	return jobs, nil
 }
 
@@ -64,6 +73,10 @@ func (ms *MemoryStore) GetAllJobs() ([]*Job, error) {
 		}
 		allJobs = append(allJobs, task)
 	}
+	ms.Logger.WithFields(logrus.Fields{
+		"Func":    "GetAllJobs",
+		"JobsNum": len(allJobs),
+	}).Debugln("OK")
 	return allJobs, nil
 }
 
@@ -83,6 +96,10 @@ func (ms *MemoryStore) AddJob(job *Job) error {
 		return nil
 	}
 	ms.JobsMap[job.Name] = ms.Jobs.PushBack(job)
+	ms.Logger.WithFields(logrus.Fields{
+		"Func":    "AddJob",
+		"JobName": job.Name,
+	}).Debugln("OK")
 	return nil
 }
 
@@ -96,6 +113,10 @@ func (ms *MemoryStore) DelJob(job *Job) error {
 	defer JobsMapLock.Unlock()
 	delete(ms.JobsMap, job.Name)
 	ms.Jobs.Remove(el)
+	ms.Logger.WithFields(logrus.Fields{
+		"Func":    "DelJob",
+		"JobName": job.Name,
+	}).Debugln("OK")
 	return nil
 }
 

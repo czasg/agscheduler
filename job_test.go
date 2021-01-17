@@ -108,7 +108,21 @@ func TestJob_GetRunTimes(t *testing.T) {
 			want: []time.Time{now.Add(-time.Nanosecond)},
 		},
 		{
-			name: "interval pass",
+			name: "interval pass with NotCoalesce",
+			fields: fields{
+				Trigger: &IntervalTrigger{
+					Interval:     time.Second,
+					StartRunTime: now.Add(-time.Second * 2),
+				},
+				NotCoalesce: true,
+			},
+			args: args{
+				now: now,
+			},
+			want: []time.Time{now.Add(-time.Second * 2), now.Add(-time.Second), now},
+		},
+		{
+			name: "interval pass with coalesce",
 			fields: fields{
 				Trigger: &IntervalTrigger{
 					Interval:     time.Second,
@@ -118,7 +132,7 @@ func TestJob_GetRunTimes(t *testing.T) {
 			args: args{
 				now: now,
 			},
-			want: []time.Time{now.Add(-time.Second * 2), now.Add(-time.Second), now},
+			want: []time.Time{now},
 		},
 	}
 	for _, tt := range tests {

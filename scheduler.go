@@ -26,20 +26,26 @@ func (ags *AGScheduler) FillByDefault() {
 	if ags.Logger == nil {
 		ags.Logger = Log.WithFields(GenASGModule("scheduler"))
 	}
+	if ags.Status == "" {
+		ags.Status.SetPaused()
+	}
 	if ags.Context == nil {
 		ags.Context = context.Background()
 	}
 }
 
-func (ags *AGScheduler) Start() {
+func (ags *AGScheduler) listenSignal() {
 	ags.FillByDefault()
 	ags.Status.SetRunning()
-	go func() {
-		ch := make(chan os.Signal)
-		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGQUIT)
-		ags.Logger.Warningln(fmt.Sprintf("receive signal[%s], exiting.", (<-ch).String()))
-		_ = ags.Close()
-	}()
+	ch := make(chan os.Signal)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGQUIT)
+	ags.Logger.Warningln(fmt.Sprintf("receive signal[%s], exiting.", (<-ch).String()))
+	_ = ags.Close()
+}
+
+func (ags *AGScheduler) Start() {
+	ags.FillByDefault()
+	go ags.listenSignal()
 	for {
 		now := time.Now()
 		jobs, err := ags.Store.GetSchedulingJobs(now)
@@ -47,11 +53,21 @@ func (ags *AGScheduler) Start() {
 			ags.Logger.WithError(err).Errorln("there exist an error when get jobs from store.")
 		}
 		for _, job := range jobs {
+			job.FillByDefault()
 			runTimes := job.GetRunTimes(now)
-			if len(runTimes) > 1 && !job.NotCoalesce {
-				runTimes = runTimes[len(runTimes)-1:]
+			if len(runTimes) > 0 {
+				job.Run(runTimes)
+				job.NextRunTime = job.Trigger.GetNextRunTime(runTimes[len(runTimes)-1], now)
+				if job.NextRunTime.Equal(MinDateTime) {
+					if err = ags.Store.DelJob(job); err != nil {
+						ags.Logger.WithError(err).Errorln("there exist an error when delete jobs.")
+					}
+					continue
+				}
+				if err = ags.Store.UpdateJob(job); err != nil {
+					ags.Logger.WithError(err).Errorln("there exist an error when update jobs.")
+				}
 			}
-			job.Run(runTimes)
 		}
 		nextRunTime, err := ags.Store.GetNextRunTime()
 		if err != nil {
@@ -66,6 +82,9 @@ func (ags *AGScheduler) Start() {
 			break
 		}
 	}
+	ags.Logger.WithFields(logrus.Fields{
+		"Status": ags.Status,
+	}).Info("scheduler over.")
 }
 
 func (ags *AGScheduler) WaitWithTime(waitTime time.Time) {
@@ -83,19 +102,17 @@ func (ags *AGScheduler) Pause() {
 
 func (ags *AGScheduler) Wake() {
 	ags.FillByDefault()
-	if ags.Status.IsPaused() {
-		if ags.WaitCancel == nil {
-			ags.Logger.Warningln("scheduler is paused and there is not WaitCancelFunc to wake it.")
-			return
-		}
-		ags.WaitCancel()
+	if ags.WaitCancel == nil {
+		ags.Logger.Warningln("scheduler is paused and there is not WaitCancelFunc to wake it.")
+		return
 	}
+	ags.WaitCancel()
 }
 
 func (ags *AGScheduler) Close() error {
 	ags.FillByDefault()
-	ags.Status.SetPaused()
 	ags.Status.SetStopped()
+	defer ags.Wake()
 	return nil
 }
 
@@ -103,9 +120,50 @@ func (ags *AGScheduler) AddJob(job *Job) (err error) {
 	ags.FillByDefault()
 	job.FillByDefault()
 	err = ags.Store.AddJob(job)
+	if err == nil {
+		defer ags.Wake()
+	}
+	return
+}
+
+func (ags *AGScheduler) DelJob(job *Job) (err error) {
+	ags.FillByDefault()
+	job.FillByDefault()
+	err = ags.Store.DelJob(job)
+	if err != nil {
+		defer ags.Wake()
+	}
+	return
+}
+
+func (ags *AGScheduler) UpdateJob(job *Job) (err error) {
+	ags.FillByDefault()
+	job.FillByDefault()
+	err = ags.Store.UpdateJob(job)
+	if err != nil {
+		defer ags.Wake()
+	}
+	return
+}
+
+func (ags *AGScheduler) GetAllJobs() (jobs []*Job, err error) {
+	ags.FillByDefault()
+	jobs, err = ags.Store.GetAllJobs()
 	if err != nil {
 		return
 	}
-	defer ags.Wake()
+	for _, job := range jobs {
+		job.FillByDefault()
+	}
+	return
+}
+
+func (ags *AGScheduler) GetJobByJobName(jobName string) (job *Job, err error) {
+	ags.FillByDefault()
+	job, err = ags.Store.GetJobByName(jobName)
+	if err != nil {
+		return
+	}
+	job.FillByDefault()
 	return
 }

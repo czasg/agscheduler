@@ -63,9 +63,6 @@ func (j *Job) FillByDefault() {
 	if j.Trigger == nil {
 		j.Trigger = DateTrigger{NextRunTime: time.Now()}
 	}
-	if j.NextRunTime == MinDateTime {
-		j.NextRunTime = j.Trigger.GetNextRunTime(MinDateTime, time.Now())
-	}
 	if j.Logger == nil {
 		j.Logger = Log.WithFields(GenASGModule("job")).WithField("JobName", j.Name)
 	}
@@ -102,6 +99,9 @@ func (j *Job) GetRunTimes(now time.Time) []time.Time {
 		nextRunTime = j.NextRunTime
 		tolerance   = 0
 	)
+	if nextRunTime == MinDateTime {
+		nextRunTime = j.Trigger.GetNextRunTime(MinDateTime, now)
+	}
 	for {
 		if nextRunTime.After(now) {
 			break
@@ -116,6 +116,9 @@ func (j *Job) GetRunTimes(now time.Time) []time.Time {
 		}
 		runTimes = append(runTimes, nextRunTime)
 		nextRunTime = j.Trigger.GetNextRunTime(nextRunTime, now)
+	}
+	if len(runTimes) > 1 && !j.NotCoalesce {
+		runTimes = runTimes[len(runTimes)-1:]
 	}
 	return runTimes
 }
