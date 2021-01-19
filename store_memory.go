@@ -149,6 +149,7 @@ func (ms *MemoryStore) UpdateJob(job *Job) error {
 func (ms *MemoryStore) GetNextRunTime() (time.Time, error) {
 	ms.FillByDefault()
 	if ms.Jobs.Len() == 0 {
+		ms.Logger.Warningln("there is no jobs for scheduling, wait MaxDateTime.")
 		return MaxDateTime, nil
 	}
 	job, ok := ms.Jobs.Front().Value.(*Job)

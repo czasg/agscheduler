@@ -37,8 +37,8 @@ func (ags *AGScheduler) FillByDefault() {
 func (ags *AGScheduler) listenSignal() {
 	ags.FillByDefault()
 	ags.Status.SetRunning()
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGQUIT)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGTERM, syscall.SIGQUIT)
 	ags.Logger.Warningln(fmt.Sprintf("receive signal[%s], exiting.", (<-ch).String()))
 	_ = ags.Close()
 }
@@ -103,7 +103,6 @@ func (ags *AGScheduler) Pause() {
 func (ags *AGScheduler) Wake() {
 	ags.FillByDefault()
 	if ags.WaitCancel == nil {
-		ags.Logger.Warningln("scheduler is paused and there is not WaitCancelFunc to wake it.")
 		return
 	}
 	ags.WaitCancel()

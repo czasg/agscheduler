@@ -46,13 +46,14 @@ type ITask interface {
 }
 
 type Job struct {
-	Id           int      `json:"id" pg:",pk"`
-	Name         string   `json:"name" pg:",use_zero"`
-	Task         ITask    `json:"-" pg:"-"`
-	Trigger      ITrigger `json:"-" pg:"-"`
-	Status       STATUS   `json:"status" pg:",use_zero"`
-	NotCoalesce  bool     `json:"not_coalesce" pg:",use_zero"`
-	MaxInstances int      `json:"max_instances" pg:",use_zero"`
+	Id             int           `json:"id" pg:",pk"`
+	Name           string        `json:"name" pg:",use_zero"`
+	Task           ITask         `json:"-" pg:"-"`
+	Trigger        ITrigger      `json:"-" pg:"-"`
+	Status         STATUS        `json:"status" pg:",use_zero"`
+	NotCoalesce    bool          `json:"not_coalesce" pg:",use_zero"`
+	MaxInstances   int           `json:"max_instances" pg:",use_zero"`
+	DelayGraceTime time.Duration `json:"delay_grace_time" pg:",use_zero"`
 	/* should be init by AGS. */
 	Scheduler   AGScheduler   `json:"-" pg:"-"`
 	NextRunTime time.Time     `json:"next_run_time" pg:",use_zero"`
@@ -63,6 +64,9 @@ func (j *Job) FillByDefault() {
 	if j.Trigger == nil {
 		j.Trigger = DateTrigger{NextRunTime: time.Now()}
 	}
+	if j.NextRunTime.Equal(MinDateTime) {
+		j.NextRunTime = j.Trigger.GetNextRunTime(MinDateTime, time.Now())
+	}
 	if j.Logger == nil {
 		j.Logger = Log.WithFields(GenASGModule("job")).WithField("JobName", j.Name)
 	}
@@ -71,19 +75,25 @@ func (j *Job) FillByDefault() {
 func (j *Job) Run(runTimes []time.Time) {
 	j.FillByDefault()
 	for _, runTime := range runTimes {
-		logger := j.Logger.WithFields(logrus.Fields{"RunTime": runTime})
+		if j.DelayGraceTime > 0 && runTime.Add(j.DelayGraceTime).Before(time.Now()) {
+			j.Logger.WithFields(logrus.Fields{
+				"DelayGraceTime": j.DelayGraceTime,
+				"RunTime":        runTime,
+			}).Errorln("job's run time is out of grace time, shouldn't be scheduled.")
+			continue
+		}
 		instance := IncreaseInstance(j.Name)
 		if instance > j.MaxInstances {
-			logger.WithFields(logrus.Fields{"MaxInstances": j.MaxInstances + 1}).
+			j.Logger.WithFields(logrus.Fields{"MaxInstances": j.MaxInstances + 1}).
 				Warningln("Out Of MaxInstances, ignore this scheduler")
 			break
 		}
 		go func() {
-			logger.Debugln("task run")
+			j.Logger.Debugln("task run")
 			defer func() {
 				ReduceInstance(j.Name)
 				if r := recover(); r != nil {
-					logger.WithFields(logrus.Fields{"TaskRecover": r}).
+					j.Logger.WithFields(logrus.Fields{"TaskRecover": r}).
 						Errorln("Panic! please ensure task right.")
 				}
 			}()
@@ -99,9 +109,6 @@ func (j *Job) GetRunTimes(now time.Time) []time.Time {
 		nextRunTime = j.NextRunTime
 		tolerance   = 0
 	)
-	if nextRunTime == MinDateTime {
-		nextRunTime = j.Trigger.GetNextRunTime(MinDateTime, now)
-	}
 	for {
 		if nextRunTime.After(now) {
 			break
