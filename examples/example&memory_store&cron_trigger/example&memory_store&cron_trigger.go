@@ -8,27 +8,28 @@ import (
 	"time"
 )
 
-type MSIntervalTask struct {
+type MSCronTask struct {
 	Url    string
 	Method string
 }
 
-func (m MSIntervalTask) Run(ctx context.Context) {
+func (m MSCronTask) Run(ctx context.Context) {
 	fmt.Printf("[%v]%s/%s\n", time.Now(), m.Method, m.Url)
 }
 
 func main() {
 	agscheduler.AGSLog.SetLevel(logrus.DebugLevel)
+	now := time.Now()
+	fmt.Println(now)
 	job := agscheduler.Job{
 		Name: "http-task",
-		Trigger: &agscheduler.IntervalTrigger{
-			Interval: time.Second * 20,
+		Trigger: &agscheduler.CronTrigger{
+			CronCmd: "*/25 * * * *",
 		},
-		Task: &MSIntervalTask{
+		Task: &MSCronTask{
 			Url:    "/api",
 			Method: "/GET",
 		},
-		DelayGraceTime: time.Second,
 	}
 	scheduler := agscheduler.AGScheduler{}
 	err := scheduler.AddJob(&job)

@@ -23,7 +23,7 @@ func main() {
 	fmt.Println(now)
 	job := agscheduler.Job{
 		Name: "http-task",
-		Trigger: agscheduler.DateTrigger{
+		Trigger: &agscheduler.DateTrigger{
 			NextRunTime: now.Add(time.Second * 30),
 		},
 		Task: &MSDateTask{
