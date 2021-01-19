@@ -65,7 +65,7 @@ func (ms *MemoryStore) GetJobByName(name string) (*Job, error) {
 
 func (ms *MemoryStore) GetAllJobs() ([]*Job, error) {
 	ms.FillByDefault()
-	var allJobs []*Job
+	allJobs := []*Job{}
 	for el := ms.Jobs.Front(); el != nil; el = el.Next() {
 		task, ok := el.Value.(*Job)
 		if !ok {
