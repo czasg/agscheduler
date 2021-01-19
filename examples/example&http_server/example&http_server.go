@@ -67,6 +67,27 @@ func (h HttpHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request
 			return
 		}
 		_, _ = writer.Write(body)
+	case "/transport":
+		transport := &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   time.Minute,
+				KeepAlive: time.Minute,
+			}).DialContext,
+			ResponseHeaderTimeout: time.Minute,
+		}
+		req, _ := http.NewRequestWithContext(context.Background(), request.Method, "http://www.baidu.com", request.Body)
+		resp, err := transport.RoundTrip(req)
+		if err != nil {
+			_, _ = writer.Write([]byte(err.Error()))
+			return
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			_, _ = writer.Write([]byte(err.Error()))
+			return
+		}
+		_, _ = writer.Write(body)
 	default:
 		_, _ = writer.Write([]byte("hello world"))
 	}
