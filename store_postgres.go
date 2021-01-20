@@ -2,11 +2,30 @@ package agscheduler
 
 import (
 	"github.com/go-pg/pg/v10"
+	"github.com/go-pg/pg/v10/orm"
 	"github.com/sirupsen/logrus"
 	"time"
 )
 
 var PG *pg.DB
+
+func NewPG() *pg.DB {
+	pG := pg.Connect(&pg.Options{
+		Addr:         Config.PG.Addr,
+		User:         Config.PG.User,
+		Password:     Config.PG.Password,
+		Database:     Config.PG.Database,
+		PoolSize:     Config.PG.PoolSize,
+		MaxRetries:   3,
+		MinIdleConns: 2,
+	})
+	if err := pG.Model((*Job)(nil)).CreateTable(&orm.CreateTableOptions{
+		IfNotExists: true,
+	}); err != nil {
+		AGSLog.WithError(err).Panic("create table error.")
+	}
+	return pG
+}
 
 type PostgresStore struct {
 	Logger *logrus.Entry
@@ -19,15 +38,7 @@ func (ps *PostgresStore) FillByDefault() {
 	}
 	if ps.PG == nil {
 		if PG == nil {
-			PG = pg.Connect(&pg.Options{
-				Addr:         Config.PG.Addr,
-				User:         Config.PG.User,
-				Password:     Config.PG.Password,
-				Database:     Config.PG.Database,
-				PoolSize:     Config.PG.PoolSize,
-				MaxRetries:   3,
-				MinIdleConns: 2,
-			})
+			PG = NewPG()
 		}
 		ps.PG = PG.WithContext(AGSContext)
 	}

@@ -46,6 +46,7 @@ type ITask interface {
 }
 
 type Job struct {
+	tableName      struct{}      `json:"-" pg:"ags_jobs"`
 	Id             int           `json:"id" pg:",pk"`
 	Name           string        `json:"name" pg:",use_zero"`
 	Task           ITask         `json:"-" pg:"-"`
