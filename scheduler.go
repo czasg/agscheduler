@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+var (
+	AGSContext = context.Background()
+)
+
 type AGScheduler struct {
 	Store  IStore
 	Logger *logrus.Entry
@@ -30,7 +34,7 @@ func (ags *AGScheduler) FillByDefault() {
 		ags.Status.SetPaused()
 	}
 	if ags.Context == nil {
-		ags.Context = context.Background()
+		ags.Context = AGSContext
 	}
 }
 
