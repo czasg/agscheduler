@@ -345,6 +345,12 @@ func TestMemoryStore_GetNextRunTime(t *testing.T) {
 }
 
 func TestMemoryStore_GetSchedulingJobs(t *testing.T) {
+	now := time.Now()
+	job1 := &Job{Name: "test1"}
+	job2 := &Job{Name: "test2"}
+	testList := list.New()
+	testList.PushBack(job1)
+	testList.PushBack(job2)
 	type fields struct {
 		Jobs    *list.List
 		JobsMap map[string]*list.Element
@@ -365,6 +371,17 @@ func TestMemoryStore_GetSchedulingJobs(t *testing.T) {
 			fields:  fields{},
 			args:    args{},
 			want:    []*Job{},
+			wantErr: false,
+		},
+		{
+			name: "pass",
+			fields: fields{
+				Jobs: testList,
+			},
+			args: args{
+				now: now,
+			},
+			want:    []*Job{job1, job2},
 			wantErr: false,
 		},
 	}
