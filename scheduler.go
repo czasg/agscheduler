@@ -115,33 +115,45 @@ func (ags *AGScheduler) Close() error {
 	return nil
 }
 
-func (ags *AGScheduler) AddJob(job *Job) (err error) {
+func (ags *AGScheduler) AddJob(jobs ...*Job) (err error) {
 	ags.FillByDefault()
-	job.FillByDefault()
-	err = ags.Store.AddJob(job)
-	if err == nil {
-		defer ags.Wake()
+	done := []*Job{}
+	for _, job := range jobs {
+		job.FillByDefault()
+		err = ags.Store.AddJob(job)
+		if err != nil {
+			_ = ags.DelJob(done...)
+			return err
+		}
+		done = append(done, job)
 	}
+	defer ags.Wake()
 	return
 }
 
-func (ags *AGScheduler) DelJob(job *Job) (err error) {
+func (ags *AGScheduler) DelJob(jobs ...*Job) (err error) {
 	ags.FillByDefault()
-	job.FillByDefault()
-	err = ags.Store.DelJob(job)
-	if err != nil {
-		defer ags.Wake()
+	for _, job := range jobs {
+		job.FillByDefault()
+		err = ags.Store.DelJob(job)
+		if err != nil {
+			return err
+		}
 	}
+	defer ags.Wake()
 	return
 }
 
-func (ags *AGScheduler) UpdateJob(job *Job) (err error) {
+func (ags *AGScheduler) UpdateJob(jobs ...*Job) (err error) {
 	ags.FillByDefault()
-	job.FillByDefault()
-	err = ags.Store.UpdateJob(job)
-	if err != nil {
-		defer ags.Wake()
+	for _, job := range jobs {
+		job.FillByDefault()
+		err = ags.Store.UpdateJob(job)
+		if err != nil {
+			return err
+		}
 	}
+	defer ags.Wake()
 	return
 }
 
