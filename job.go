@@ -1,7 +1,6 @@
 package agscheduler
 
 import (
-	"context"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -39,10 +38,6 @@ func DeleteInstance(key string) {
 	InstanceLock.Lock()
 	defer InstanceLock.Unlock()
 	delete(InstanceMap, key)
-}
-
-type ITask interface {
-	Run(ctx context.Context)
 }
 
 type Job struct {
