@@ -66,7 +66,6 @@ func DeserializeTask(job *Job) error {
 	if !ok {
 		return errors.New("task is not type of reflect.Type.")
 	}
-	fmt.Println(taskT)
 	newTaskT := reflect.New(taskT)
 	if newTaskT.Kind() == reflect.Ptr {
 		newTaskT = newTaskT.Elem()
@@ -79,7 +78,6 @@ func DeserializeTask(job *Job) error {
 		}
 		newTaskT.Field(i).Set(reflect.ValueOf(fieldValue))
 	}
-	fmt.Println(newTaskT, allITasks)
 	newTask, ok := newTaskT.Interface().(ITask)
 	if !ok {
 		return fmt.Errorf("task[%v] is not type of ITask.", newTaskT.String())

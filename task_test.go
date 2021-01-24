@@ -12,7 +12,7 @@ type TestTask struct {
 	Age  float64
 }
 
-func (t *TestTask) Run(ctx context.Context) {
+func (t TestTask) Run(ctx context.Context) {
 	fmt.Println(t.Name, t.Age)
 }
 
@@ -29,9 +29,7 @@ func TestDeserializeTask(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(job.Task)
 	job.Task = nil
-	fmt.Println(job.Task)
 	type args struct {
 		job *Job
 	}
@@ -53,7 +51,6 @@ func TestDeserializeTask(t *testing.T) {
 			if err := DeserializeTask(tt.args.job); (err != nil) != tt.wantErr {
 				t.Errorf("DeserializeTask() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			fmt.Println(job.Task)
 			//err := SerializeTask(&job)
 			//if err != nil {
 			//	panic(err)
