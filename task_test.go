@@ -51,11 +51,6 @@ func TestDeserializeTask(t *testing.T) {
 			if err := DeserializeTask(tt.args.job); (err != nil) != tt.wantErr {
 				t.Errorf("DeserializeTask() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			//err := SerializeTask(&job)
-			//if err != nil {
-			//	panic(err)
-			//}
-			//fmt.Println(job.Task)
 		})
 	}
 }
