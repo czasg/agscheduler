@@ -51,6 +51,7 @@ func TestDeserializeTask(t *testing.T) {
 			if err := DeserializeTask(tt.args.job); (err != nil) != tt.wantErr {
 				t.Errorf("DeserializeTask() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			tt.args.job.Task.Run(context.Background())
 		})
 	}
 }
@@ -109,9 +110,10 @@ func TestSerializeTask(t *testing.T) {
 			if err := SerializeTask(tt.args.job); (err != nil) != tt.wantErr {
 				t.Errorf("SerializeTask() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.args.job.TaskMeta != nil {
+			if tt.args.job.TaskMeta == nil {
 				t.Errorf("task meta should not be nil.")
 			}
+			fmt.Println(tt.args.job.TaskMeta)
 		})
 	}
 }
