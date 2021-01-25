@@ -92,6 +92,7 @@ func (ags *AGScheduler) Start() {
 }
 
 func (ags *AGScheduler) WaitWithTime(waitTime time.Time) {
+	ags.FillByDefault()
 	ctx, cancel := context.WithDeadline(ags.Context, waitTime)
 	ags.WaitCancel = cancel
 	<-ctx.Done()
