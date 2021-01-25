@@ -1,205 +1,185 @@
-package AGScheduler
+package agscheduler
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"github.com/sirupsen/logrus"
-	"math"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 )
 
-var EmptyDateTime time.Time
-var MaxDateTime = time.Now().Add(time.Duration(math.MaxInt64))
+var (
+	AGSContext = context.Background()
+)
 
-type Scheduler struct {
-	StoresMap   map[string]IStore
-	Logger      *logrus.Entry
-	Controller  *Controller
-	CloseCancel context.CancelFunc
+type AGScheduler struct {
+	Store  IStore
+	Logger *logrus.Entry
+	Status STATUS
+	// context.
+	Context    context.Context
+	WaitCancel context.CancelFunc
 }
 
-func NewScheduler(store IStore) *Scheduler {
-	return &Scheduler{
-		StoresMap: map[string]IStore{
-			"default": store,
-		},
-		Logger: logrus.WithFields(logrus.Fields{
-			"Module": "AGScheduler.Scheduler",
-		}),
-		Controller: NewController(),
+func (ags *AGScheduler) FillByDefault() {
+	if ags.Store == nil {
+		ags.Store = &MemoryStore{}
+	}
+	if ags.Logger == nil {
+		ags.Logger = Log.WithFields(GenASGModule("scheduler"))
+	}
+	if ags.Status == "" {
+		ags.Status.SetPaused()
+	}
+	if ags.Context == nil {
+		ags.Context = AGSContext
 	}
 }
 
-func (s *Scheduler) Start() {
-	logger := s.Logger.WithFields(logrus.Fields{
-		"Func": "Start",
-	})
-	closeContext, cancel := context.WithCancel(context.Background())
-	s.CloseCancel = cancel
-	go func() {
-		ch := make(chan os.Signal, 1)
-		signal.Notify(ch,
-			os.Interrupt,
-			syscall.SIGINT,
-			syscall.SIGTERM,
-		)
-		exitSignal := <-ch
-		logger.Warnf("receive a signal of %v", exitSignal)
-		s.Close()
-	}()
+func (ags *AGScheduler) listenSignal() {
+	ags.FillByDefault()
+	ags.Status.SetRunning()
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGTERM, syscall.SIGQUIT)
+	ags.Logger.Warningln(fmt.Sprintf("receive signal[%s], exiting.", (<-ch).String()))
+	_ = ags.Close()
+}
 
+func (ags *AGScheduler) Start() {
+	ags.FillByDefault()
+	go ags.listenSignal()
 	for {
-		select {
-		case <-closeContext.Done():
-			goto Exit
-		default:
-			now := time.Now()
-			nextCallTime := time.Time{}
-			for _, store := range s.StoresMap {
-				{
-					dueTasks := store.GetDueTasks(now) // Gets the tasks that should be scheduled
-					for _, dueTask := range dueTasks {
-						dueTask.Go(now)
-						dueTaskNextRunTime := dueTask.GetNextFireTime(now)
-						if dueTaskNextRunTime.Equal(EmptyDateTime) {
-							err := store.DelTask(dueTask)
-							if err != nil {
-								logger.WithFields(logrus.Fields{
-									"TaskName": dueTask.Name,
-								}).WithError(err).Errorln("del task failure")
-							} else {
-								logger.Info("del task success: " + dueTask.Name)
-							}
-							continue
-						}
-						err := store.UpdateTask(dueTask)
-						if err != nil {
-							logger.WithFields(logrus.Fields{
-								"TaskName": dueTask.Name,
-							}).WithError(err).Errorln("update task failure")
-						}
-					}
-				}
-				{
-					nextRunTime := store.GetNextRunTime()
-					if nextRunTime.Equal(EmptyDateTime) {
-						continue
-					}
-					if nextCallTime.Equal(EmptyDateTime) {
-						nextCallTime = nextRunTime
-					}
-					if nextCallTime.After(nextRunTime) {
-						nextCallTime = nextRunTime
-					}
-				}
-			}
-			{
-				if nextCallTime.Equal(EmptyDateTime) {
-					logger.Info("wait task")
-					nextCallTime = MaxDateTime // block until new task to wake
-				}
-				s.Controller.Reset(nextCallTime)
-				<-s.Controller.Deadline.Done()
-			}
-		}
-	}
-Exit:
-	logger.Warning("AGScheduler server closed")
-}
-
-func (s *Scheduler) Close() {
-	s.CloseCancel()
-	time.Sleep(time.Second)
-	s.Wake()
-}
-
-func (s *Scheduler) Wake() {
-	s.Controller.Cancel()
-}
-
-func (s *Scheduler) AddTask(task *Task) error {
-	logger := s.Logger.WithFields(logrus.Fields{
-		"Func": "AddTask",
-	})
-	task.Scheduler = s
-	taskName := task.Name
-	_, ok := WorksMap[taskName]
-	if ok {
-		return errors.New(taskName + " is conflict with TasksMap")
-	}
-	err := s.StoresMap["default"].AddTask(task)
-	if err != nil {
-		return err
-	}
-	logger.Info("add task success: " + taskName)
-	s.Wake()
-	return nil
-}
-
-func (s *Scheduler) AddTaskFromTasksMap(name, taskMapKey string, trigger ITrigger, args ...interface{}) error {
-	logger := s.Logger.WithFields(logrus.Fields{
-		"Func": "AddTaskFromTasksMap",
-	})
-	_, ok := WorksMap[name]
-	if ok {
-		return errors.New(name + " is conflict with TasksMap")
-	}
-	detail, ok := WorksMap[taskMapKey]
-	if !ok {
-		return errors.New(name + " is not define in TasksMap")
-	}
-	if len(args) == 0 {
-		args = detail.Args
-	}
-	task := NewTask(name, trigger, detail.Func, args...)
-	err := s.AddTask(task)
-	if err != nil {
-		return err
-	}
-	logger.Info("add task success: " + name)
-	return nil
-}
-
-func (s *Scheduler) GetTaskByName(name string) (*Task, error) {
-	for _, store := range s.StoresMap {
-		task, err := store.GetTaskByName(name)
+		now := time.Now()
+		jobs, err := ags.Store.GetSchedulingJobs(now)
 		if err != nil {
-			continue
+			ags.Logger.WithError(err).Errorln("there exist an error when get jobs from store.")
 		}
-		task.Scheduler = s
-		return task, nil
+		for _, job := range jobs {
+			job.FillByDefault()
+			runTimes := job.GetRunTimes(now)
+			if len(runTimes) > 0 {
+				job.Run(runTimes)
+				job.NextRunTime = job.Trigger.GetNextRunTime(runTimes[len(runTimes)-1], now)
+				if job.NextRunTime.Equal(MinDateTime) {
+					if err = ags.Store.DelJob(job); err != nil {
+						ags.Logger.WithError(err).Errorln("there exist an error when delete jobs.")
+					}
+					continue
+				}
+				if err = ags.Store.UpdateJob(job); err != nil {
+					ags.Logger.WithError(err).Errorln("there exist an error when update jobs.")
+				}
+			}
+		}
+		nextRunTime, err := ags.Store.GetNextRunTime()
+		if err != nil {
+			ags.Logger.WithError(err).Errorln("there exist an error when get next run time.")
+		}
+		ags.WaitWithTime(nextRunTime)
+		if ags.Status.IsPaused() {
+			ags.Logger.Warningln("scheduler paused.")
+			ags.WaitWithTime(MaxDateTime)
+		}
+		if ags.Status.IsStopped() {
+			break
+		}
 	}
-	return nil, errors.New("not found task")
+	ags.Logger.WithFields(logrus.Fields{
+		"Status": ags.Status,
+	}).Info("scheduler over.")
 }
 
-func (s *Scheduler) GetAllTasks() []*Task {
-	return s.StoresMap["default"].GetAllTasks()
+func (ags *AGScheduler) WaitWithTime(waitTime time.Time) {
+	ags.FillByDefault()
+	ctx, cancel := context.WithDeadline(ags.Context, waitTime)
+	ags.WaitCancel = cancel
+	<-ctx.Done()
 }
 
-func (s *Scheduler) UpdateTask(task *Task) error {
-	logger := s.Logger.WithFields(logrus.Fields{
-		"Func": "UpdateTask",
-	})
-	err := s.StoresMap["default"].UpdateTask(task)
-	if err != nil {
-		return err
+func (ags *AGScheduler) Pause() {
+	ags.FillByDefault()
+	ags.Logger.Warningln("scheduler is pausing.")
+	ags.Status.SetPaused()
+	ags.Wake()
+}
+
+func (ags *AGScheduler) Wake() {
+	ags.FillByDefault()
+	if ags.WaitCancel == nil {
+		return
 	}
-	logger.Info("update task success: " + task.Name)
-	s.Wake()
+	ags.WaitCancel()
+}
+
+func (ags *AGScheduler) Close() error {
+	ags.FillByDefault()
+	ags.Status.SetStopped()
+	defer ags.Wake()
 	return nil
 }
 
-func (s *Scheduler) DelTask(task *Task) error {
-	logger := s.Logger.WithFields(logrus.Fields{
-		"Func": "DelTask",
-	})
-	err := s.StoresMap["default"].DelTask(task)
-	if err != nil {
-		return err
+func (ags *AGScheduler) AddJob(jobs ...*Job) (err error) {
+	ags.FillByDefault()
+	done := []*Job{}
+	for _, job := range jobs {
+		job.FillByDefault()
+		err = ags.Store.AddJob(job)
+		if err != nil {
+			_ = ags.DelJob(done...)
+			return err
+		}
+		done = append(done, job)
 	}
-	logger.Info("del task success: " + task.Name)
-	return nil
+	defer ags.Wake()
+	return
+}
+
+func (ags *AGScheduler) DelJob(jobs ...*Job) (err error) {
+	ags.FillByDefault()
+	for _, job := range jobs {
+		job.FillByDefault()
+		err = ags.Store.DelJob(job)
+		if err != nil {
+			return err
+		}
+	}
+	defer ags.Wake()
+	return
+}
+
+func (ags *AGScheduler) UpdateJob(jobs ...*Job) (err error) {
+	ags.FillByDefault()
+	for _, job := range jobs {
+		job.FillByDefault()
+		err = ags.Store.UpdateJob(job)
+		if err != nil {
+			return err
+		}
+	}
+	defer ags.Wake()
+	return
+}
+
+func (ags *AGScheduler) GetAllJobs() (jobs []*Job, err error) {
+	ags.FillByDefault()
+	jobs, err = ags.Store.GetAllJobs()
+	if err != nil {
+		return
+	}
+	for _, job := range jobs {
+		job.FillByDefault()
+	}
+	return
+}
+
+func (ags *AGScheduler) GetJobByJobName(jobName string) (job *Job, err error) {
+	ags.FillByDefault()
+	job, err = ags.Store.GetJobByName(jobName)
+	if err != nil {
+		return
+	}
+	job.FillByDefault()
+	return
 }

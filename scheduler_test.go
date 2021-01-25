@@ -1,4 +1,4 @@
-package AGScheduler
+package agscheduler
 
 import (
 	"context"
@@ -8,42 +8,16 @@ import (
 	"time"
 )
 
-func TestNewScheduler(t *testing.T) {
-	type args struct {
-		store IStore
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		{
-			name: "new",
-			args: args{
-				store: NewMemoryStore(),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			scheduler := NewScheduler(tt.args.store)
-			scheduler.Wake()
-		})
-	}
-}
-
-func TestScheduler_AddTask(t *testing.T) {
-	now := time.Now()
-	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", interval, func(args ...interface{}) {})
-
+func TestAGScheduler_AddJob(t *testing.T) {
 	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
 	}
 	type args struct {
-		task *Task
+		jobs []*Job
 	}
 	tests := []struct {
 		name    string
@@ -52,61 +26,87 @@ func TestScheduler_AddTask(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "add",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": NewMemoryStore(),
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
+			name: "pass",
 			args: args{
-				task: task,
+				jobs: []*Job{
+					{
+						Name: "test",
+						Trigger: DateTrigger{
+							NextRunTime: time.Now(),
+						},
+						Task: TestTask{},
+					},
+				},
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
 			}
-			if err := s.AddTask(tt.args.task); (err != nil) != tt.wantErr {
-				t.Errorf("AddTask() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ags.AddJob(tt.args.jobs...); (err != nil) != tt.wantErr {
+				t.Errorf("AddJob() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
-	err := RegisterWorksMap(map[string]WorkDetail{
-		"test": WorkDetail{
-			Func: func(args ...interface{}) {},
-			Args: []interface{}{},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	now := time.Now()
-	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-
+func TestAGScheduler_Close(t *testing.T) {
 	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name:    "pass",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
+			}
+			if err := ags.Close(); (err != nil) != tt.wantErr {
+				t.Errorf("Close() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestAGScheduler_DelJob(t *testing.T) {
+	job := Job{
+		Name: "test",
+		Trigger: DateTrigger{
+			NextRunTime: time.Now(),
+		},
+		Task: TestTask{},
+	}
+	type fields struct {
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
 	}
 	type args struct {
-		name       string
-		taskMapKey string
-		args       []interface{}
-		trigger    ITrigger
+		jobs []*Job
 	}
 	tests := []struct {
 		name    string
@@ -115,338 +115,240 @@ func TestScheduler_AddTaskFromTasksMap(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "add-from-map",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": NewMemoryStore(),
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
+			name: "pass",
 			args: args{
-				name:       "task",
-				taskMapKey: "test",
-				args:       []interface{}{},
-				trigger:    interval,
+				jobs: []*Job{&job},
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
 			}
-			if err := s.AddTaskFromTasksMap(tt.args.name, tt.args.taskMapKey, tt.args.trigger, tt.args.args...); (err != nil) != tt.wantErr {
-				t.Errorf("AddTaskFromTasksMap() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			task, err := s.GetTaskByName("task")
-			if err != nil {
-				t.Error("add fail")
-				return
-			}
-			if task.Name != "task" {
-				t.Error("add fail")
+			_ = ags.AddJob(&job)
+			if err := ags.DelJob(tt.args.jobs...); (err != nil) != tt.wantErr {
+				t.Errorf("DelJob() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestScheduler_Close(t *testing.T) {
+func TestAGScheduler_FillByDefault(t *testing.T) {
 	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
 	}
 	tests := []struct {
 		name   string
 		fields fields
 	}{
 		{
-			name: "close",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": NewMemoryStore(),
-				},
-				Logger:     logrus.New().WithFields(logrus.Fields{}),
-				Controller: NewController(),
-			},
+			name: "pass",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
 			}
-			go s.Close()
-			s.Start()
+			ags.FillByDefault()
 		})
 	}
 }
 
-func TestScheduler_DelTask(t *testing.T) {
-	now := time.Now()
-	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", interval, func(args ...interface{}) {})
-
-	memory1 := NewMemoryStore()
-	memory2 := NewMemoryStore()
-	err := memory2.AddTask(task)
-	if err != nil {
-		panic(err)
+func TestAGScheduler_GetAllJobs(t *testing.T) {
+	job := Job{
+		Name: "test",
+		Trigger: DateTrigger{
+			NextRunTime: time.Now(),
+		},
+		Task: TestTask{},
 	}
-
 	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
-	}
-	type args struct {
-		task *Task
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name     string
+		fields   fields
+		wantJobs []*Job
+		wantErr  bool
 	}{
 		{
-			name: "del-fail",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": memory1,
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
-			args: args{
-				task: task,
-			},
-			wantErr: true,
-		},
-		{
-			name: "del-success",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": memory2,
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
-			args: args{
-				task: task,
+			name: "pass",
+			wantJobs: []*Job{
+				&job,
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
 			}
-			if err := s.DelTask(tt.args.task); (err != nil) != tt.wantErr {
-				t.Errorf("DelTask() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestScheduler_GetAllTasks(t *testing.T) {
-	now := time.Now()
-	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task1 := NewTask("task1", interval, func(args ...interface{}) {})
-	task2 := NewTask("task2", interval, func(args ...interface{}) {})
-
-	memory := NewMemoryStore()
-	_ = memory.AddTask(task1)
-	_ = memory.AddTask(task2)
-
-	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   []*Task
-	}{
-		{
-			name: "del-fail",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": memory,
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
-			want: []*Task{task2, task1},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
-			}
-			if got := s.GetAllTasks(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetAllTasks() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestScheduler_GetTaskByName(t *testing.T) {
-	now := time.Now()
-	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", interval, func(args ...interface{}) {})
-	memory := NewMemoryStore()
-	_ = memory.AddTask(task)
-
-	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
-	}
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *Task
-		wantErr bool
-	}{
-		{
-			name: "succ",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": memory,
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
-			args: args{
-				name: "task",
-			},
-			want:    task,
-			wantErr: false,
-		},
-		{
-			name: "fail",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": NewMemoryStore(),
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
-			args: args{
-				name: "task",
-			},
-			want:    nil,
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
-			}
-			got, err := s.GetTaskByName(tt.args.name)
+			_ = ags.AddJob(&job)
+			gotJobs, err := ags.GetAllJobs()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetTaskByName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetAllJobs() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetTaskByName() got = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(gotJobs, tt.wantJobs) {
+				t.Errorf("GetAllJobs() gotJobs = %v, want %v", gotJobs, tt.wantJobs)
 			}
 		})
 	}
 }
 
-func TestScheduler_Start(t *testing.T) {
+func TestAGScheduler_GetJobByJobName(t *testing.T) {
+	job := Job{
+		Name: "test",
+		Trigger: DateTrigger{
+			NextRunTime: time.Now(),
+		},
+		Task: TestTask{},
+	}
 	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
+	}
+	type args struct {
+		jobName string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantJob *Job
+		wantErr bool
+	}{
+		{
+			name: "pass",
+			args: args{
+				jobName: job.Name,
+			},
+			wantJob: &job,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
+			}
+			_ = ags.AddJob(&job)
+			gotJob, err := ags.GetJobByJobName(tt.args.jobName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetJobByJobName() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotJob, tt.wantJob) {
+				t.Errorf("GetJobByJobName() gotJob = %v, want %v", gotJob, tt.wantJob)
+			}
+		})
+	}
+}
+
+func TestAGScheduler_Pause(t *testing.T) {
+	type fields struct {
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
 	}
 	tests := []struct {
 		name   string
 		fields fields
 	}{
 		{
-			name: "start",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": NewMemoryStore(),
-				},
-				Logger:     logrus.New().WithFields(logrus.Fields{}),
-				Controller: NewController(),
-			},
+			name: "pass",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
 			}
-			go s.Close()
-			s.Start()
+			ags.Pause()
 		})
 	}
 }
 
-func TestScheduler_UpdateTask(t *testing.T) {
-	now := time.Now()
-	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	task := NewTask("task", interval, func(args ...interface{}) {})
-	memory := NewMemoryStore()
-	_ = memory.AddTask(task)
-
+func TestAGScheduler_Start(t *testing.T) {
 	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{
+			name: "pass",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
+			}
+			go func() {
+				time.Sleep(time.Second)
+				_ = ags.Close()
+			}()
+			ags.Start()
+		})
+	}
+}
+
+func TestAGScheduler_UpdateJob(t *testing.T) {
+	type fields struct {
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
 	}
 	type args struct {
-		task *Task
+		jobs []*Job
 	}
 	tests := []struct {
 		name    string
@@ -454,71 +356,125 @@ func TestScheduler_UpdateTask(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{
-			name: "update",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": memory,
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
-			args: args{
-				task: task,
-			},
-			wantErr: false,
-		},
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
 			}
-			if err := s.UpdateTask(tt.args.task); (err != nil) != tt.wantErr {
-				t.Errorf("UpdateTask() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ags.UpdateJob(tt.args.jobs...); (err != nil) != tt.wantErr {
+				t.Errorf("UpdateJob() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestScheduler_Wake(t *testing.T) {
+func TestAGScheduler_WaitWithTime(t *testing.T) {
 	type fields struct {
-		StoresMap   map[string]IStore
-		Logger      *logrus.Entry
-		Controller  *Controller
-		CloseCancel context.CancelFunc
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
+	}
+	type args struct {
+		waitTime time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "pass",
+			args: args{
+				waitTime: MaxDateTime,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
+			}
+			go func() {
+				time.Sleep(time.Second)
+				ags.Wake()
+			}()
+			ags.WaitWithTime(MaxDateTime)
+		})
+	}
+}
+
+func TestAGScheduler_Wake(t *testing.T) {
+	type fields struct {
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
 	}
 	tests := []struct {
 		name   string
 		fields fields
 	}{
 		{
-			name: "wake",
-			fields: fields{
-				StoresMap: map[string]IStore{
-					"default": NewMemoryStore(),
-				},
-				Logger: logrus.New().WithFields(logrus.Fields{
-					"Module": "GoTest",
-				}),
-				Controller: NewController(),
-			},
+			name: "pass",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Scheduler{
-				StoresMap:   tt.fields.StoresMap,
-				Logger:      tt.fields.Logger,
-				Controller:  tt.fields.Controller,
-				CloseCancel: tt.fields.CloseCancel,
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
 			}
-			s.Wake()
+			go func() {
+				time.Sleep(time.Second)
+				ags.Wake()
+			}()
+			ags.WaitWithTime(MaxDateTime)
+		})
+	}
+}
+
+func TestAGScheduler_listenSignal(t *testing.T) {
+	type fields struct {
+		Store      IStore
+		Logger     *logrus.Entry
+		Status     STATUS
+		Context    context.Context
+		WaitCancel context.CancelFunc
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{
+			name: "pass",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ags := &AGScheduler{
+				Store:      tt.fields.Store,
+				Logger:     tt.fields.Logger,
+				Status:     tt.fields.Status,
+				Context:    tt.fields.Context,
+				WaitCancel: tt.fields.WaitCancel,
+			}
+			go ags.listenSignal()
 		})
 	}
 }

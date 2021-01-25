@@ -1,240 +1,145 @@
-package AGScheduler
+package agscheduler
 
 import (
-	"github.com/sirupsen/logrus"
+	"context"
+	"fmt"
 	"reflect"
 	"testing"
-	"time"
 )
 
-func TestNewTask(t *testing.T) {
-	cron, err := NewCronTrigger("*/5 * * * *")
+type TestTask struct {
+	Name string
+	Age  float64
+}
+
+func (t TestTask) Run(ctx context.Context) {
+	fmt.Println(t.Name, t.Age)
+}
+
+func TestDeserializeTask(t *testing.T) {
+	job := Job{
+		Name: "test",
+		Task: &TestTask{
+			Name: "test-task",
+			Age:  18,
+		},
+	}
+	RegisterAllTasks(&TestTask{})
+	err := SerializeTask(&job)
 	if err != nil {
 		panic(err)
 	}
-
+	job.Task = nil
 	type args struct {
+		job *Job
+	}
+	tests := []struct {
 		name    string
-		method  func(args ...interface{})
-		args    []interface{}
-		trigger ITrigger
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "pass",
+			args: args{
+				job: &job,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := DeserializeTask(tt.args.job); (err != nil) != tt.wantErr {
+				t.Errorf("DeserializeTask() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			tt.args.job.Task.Run(context.Background())
+		})
+	}
+}
+
+func TestRegisterAllTasks(t *testing.T) {
+	type args struct {
+		tasks []ITask
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
 		{
-			name: "ensure args",
+			name: "pass",
 			args: args{
-				name:    "",
-				method:  func(args ...interface{}) {},
-				args:    []interface{}{},
-				trigger: cron,
+				[]ITask{&TestTask{}},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			NewTask(tt.args.name, tt.args.trigger, tt.args.method, tt.args.args...)
-		})
-	}
-}
-
-func TestTask_GetNextFireTime(t1 *testing.T) {
-	now := time.Now()
-	interval, _ := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	date, _ := NewDateTrigger(now)
-
-	type fields struct {
-		Id              int64
-		Name            string
-		Func            func(args ...interface{})
-		Args            []interface{}
-		Scheduler       *Scheduler
-		Trigger         ITrigger
-		PreviousRunTime time.Time
-		NextRunTime     time.Time
-		Logger          *logrus.Entry
-		Running         bool
-		Coalesce        bool
-		Count           int64
-		ErrorCount      int64
-	}
-	type args struct {
-		now time.Time
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   time.Time
-	}{
-		{
-			name: "test-interval",
-			fields: fields{
-				Id:              1,
-				Name:            "task",
-				Func:            func(args ...interface{}) {},
-				Args:            []interface{}{},
-				Scheduler:       nil,
-				Trigger:         interval,
-				PreviousRunTime: EmptyDateTime,
-				NextRunTime:     EmptyDateTime,
-				Logger:          nil,
-				Running:         true,
-				Coalesce:        true,
-				Count:           0,
-				ErrorCount:      0,
-			},
-			args: args{
-				now: now,
-			},
-			want: now,
-		},
-		{
-			name: "test-date-succ",
-			fields: fields{
-				Id:              1,
-				Name:            "task",
-				Func:            func(args ...interface{}) {},
-				Args:            []interface{}{},
-				Scheduler:       nil,
-				Trigger:         date,
-				PreviousRunTime: EmptyDateTime,
-				NextRunTime:     EmptyDateTime,
-				Logger:          nil,
-				Running:         true,
-				Coalesce:        true,
-				Count:           0,
-				ErrorCount:      0,
-			},
-			args: args{
-				now: now,
-			},
-			want: now,
-		},
-		{
-			name: "test-date-empty",
-			fields: fields{
-				Id:              1,
-				Name:            "task",
-				Func:            func(args ...interface{}) {},
-				Args:            []interface{}{},
-				Scheduler:       nil,
-				Trigger:         date,
-				PreviousRunTime: now,
-				NextRunTime:     EmptyDateTime,
-				Logger:          nil,
-				Running:         true,
-				Coalesce:        true,
-				Count:           0,
-				ErrorCount:      0,
-			},
-			args: args{
-				now: now,
-			},
-			want: EmptyDateTime,
-		},
-	}
-	for _, tt := range tests {
-		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Task{
-				Id:              tt.fields.Id,
-				Name:            tt.fields.Name,
-				Func:            tt.fields.Func,
-				Args:            tt.fields.Args,
-				Scheduler:       tt.fields.Scheduler,
-				Trigger:         tt.fields.Trigger,
-				PreviousRunTime: tt.fields.PreviousRunTime,
-				NextRunTime:     tt.fields.NextRunTime,
-				Logger:          tt.fields.Logger,
-				Running:         tt.fields.Running,
-				Coalesce:        tt.fields.Coalesce,
-				Count:           tt.fields.Count,
-			}
-			if got := t.GetNextFireTime(tt.args.now); !reflect.DeepEqual(got, tt.want) {
-				t1.Errorf("GetNextFireTime() = %v, want %v", got, tt.want)
+			RegisterAllTasks(tt.args.tasks...)
+			if len(allITasks) == 0 {
+				t.Errorf("tasks should not be null.")
 			}
 		})
 	}
 }
 
-func TestTask_Go(t1 *testing.T) {
-	now := time.Now()
-	interval, err := NewIntervalTrigger(now, EmptyDateTime, time.Second)
-	if err != nil {
-		panic(err)
-	}
-	intChan := make(chan int)
-
-	type fields struct {
-		Id              int64
-		Name            string
-		Func            func(args ...interface{})
-		Args            []interface{}
-		Scheduler       *Scheduler
-		Trigger         ITrigger
-		PreviousRunTime time.Time
-		NextRunTime     time.Time
-		Logger          *logrus.Entry
-		Running         bool
-		Coalesce        bool
-		Count           int64
-		ErrorCount      int64
-	}
+func TestSerializeTask(t *testing.T) {
+	RegisterAllTasks(&TestTask{})
 	type args struct {
-		runTime time.Time
+		job *Job
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
+		name    string
+		args    args
+		wantErr bool
 	}{
 		{
-			name: "test",
-			fields: fields{
-				Id:   1,
-				Name: "task",
-				Func: func(args ...interface{}) {
-					iChan := args[0].(chan int)
-					iChan <- 0
+			name: "pass",
+			args: args{
+				job: &Job{
+					Name: "test",
+					Task: &TestTask{
+						Name: "test-task",
+						Age:  18,
+					},
 				},
-				Args:            []interface{}{intChan},
-				Scheduler:       nil,
-				Trigger:         interval,
-				PreviousRunTime: EmptyDateTime,
-				NextRunTime:     EmptyDateTime,
-				Logger:          nil,
-				Running:         true,
-				Coalesce:        true,
-				Count:           0,
-				ErrorCount:      0,
 			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := SerializeTask(tt.args.job); (err != nil) != tt.wantErr {
+				t.Errorf("SerializeTask() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.args.job.TaskMeta == nil {
+				t.Errorf("task meta should not be nil.")
+			}
+			fmt.Println(tt.args.job.TaskMeta)
+		})
+	}
+}
+
+func Test_addTask(t *testing.T) {
+	type args struct {
+		taskName string
+		taskType reflect.Type
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "pass",
 			args: args{
-				runTime: now,
+				taskName: "test",
+				taskType: reflect.TypeOf("test"),
 			},
 		},
 	}
 	for _, tt := range tests {
-		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &Task{
-				Id:              tt.fields.Id,
-				Name:            tt.fields.Name,
-				Func:            tt.fields.Func,
-				Args:            tt.fields.Args,
-				Scheduler:       tt.fields.Scheduler,
-				Trigger:         tt.fields.Trigger,
-				PreviousRunTime: tt.fields.PreviousRunTime,
-				NextRunTime:     tt.fields.NextRunTime,
-				Logger:          tt.fields.Logger,
-				Running:         tt.fields.Running,
-				Coalesce:        tt.fields.Coalesce,
-				Count:           tt.fields.Count,
-			}
-			t.Go(now)
-			<-intChan
-			if t.Count != 1 {
-				t1.Errorf("func not work")
+		t.Run(tt.name, func(t *testing.T) {
+			addTask(tt.args.taskName, tt.args.taskType)
+			if allITasks["test"] == nil {
+				t.Errorf("tasks should not't be nil.")
 			}
 		})
 	}
