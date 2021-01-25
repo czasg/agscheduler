@@ -49,6 +49,9 @@ func (ps *PostgresStore) GetSchedulingJobs(now time.Time) ([]*Job, error) {
 	ps.FillByDefault()
 	jobs := []*Job{}
 	err := ps.PG.Model(&jobs).Where("next_run_time <= ?", now).Select()
+	if err == pg.ErrNoRows {
+		return jobs, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +92,6 @@ func (ps *PostgresStore) GetAllJobs() ([]*Job, error) {
 	ps.FillByDefault()
 	jobs := []*Job{}
 	err := ps.PG.Model(&jobs).Select()
-	fmt.Println(jobs)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +165,11 @@ func (ps *PostgresStore) GetNextRunTime() (time.Time, error) {
 	ps.FillByDefault()
 	job := Job{}
 	err := ps.PG.Model(&job).Order("next_run_time ASC").Returning("next_run_time").Limit(1).Select()
+	if err == pg.ErrNoRows {
+		return MaxDateTime, nil
+	}
 	if err != nil {
-		return MinDateTime, err
+		return MaxDateTime, err
 	}
 	return job.NextRunTime, nil
 }
