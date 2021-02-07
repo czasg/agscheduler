@@ -67,7 +67,7 @@ func DeserializeTask(job *Job) error {
 		return errors.New("task is not type of reflect.Type.")
 	}
 	newTaskT := reflect.New(taskT)
-	if newTaskT.Kind() == reflect.Ptr {
+	if newTaskT.Kind() == reflect.Ptr && !newTaskT.IsNil() {
 		newTaskT = newTaskT.Elem()
 	}
 	for i := 0; i < taskT.NumField(); i++ {
