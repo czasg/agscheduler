@@ -7,7 +7,7 @@ type DateTrigger struct {
 }
 
 // if previous is empty, return NextRunTime directly
-func (t DateTrigger) GetNextRunTime(previous, now time.Time) time.Time {
+func (t *DateTrigger) GetNextRunTime(previous, now time.Time) time.Time {
 	if !previous.Equal(MinDateTime) {
 		return MinDateTime
 	}

@@ -41,7 +41,6 @@ func DeleteInstance(key string) {
 }
 
 type Job struct {
-	tableName      struct{}               `json:"-" pg:"ags_jobs"`
 	Id             int                    `json:"id" pg:",pk"`
 	Name           string                 `json:"name" pg:",use_zero,unique"`
 	Task           ITask                  `json:"-" pg:"-"`
@@ -59,7 +58,7 @@ type Job struct {
 
 func (j *Job) FillByDefault() {
 	if j.Trigger == nil {
-		j.Trigger = DateTrigger{NextRunTime: time.Now()}
+		j.Trigger = &DateTrigger{NextRunTime: time.Now()}
 	}
 	if j.NextRunTime.Equal(MinDateTime) {
 		j.NextRunTime = j.Trigger.GetNextRunTime(MinDateTime, time.Now())

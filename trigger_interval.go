@@ -8,7 +8,7 @@ type IntervalTrigger struct {
 	EndRunTime   time.Time     `json:"end_run_time"`
 }
 
-func (t IntervalTrigger) GetNextRunTime(previous, now time.Time) time.Time {
+func (t *IntervalTrigger) GetNextRunTime(previous, now time.Time) time.Time {
 	if t.EndRunTime.After(now) {
 		return MinDateTime
 	}
